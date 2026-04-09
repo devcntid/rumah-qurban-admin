@@ -68,6 +68,9 @@ export type OrderDetail = {
   companyName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
+  deliveryAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
   subtotal: string;
   discount: string;
   grandTotal: string;
@@ -76,6 +79,32 @@ export type OrderDetail = {
   status: string;
   createdAt: string;
 };
+
+export type TransactionRow = {
+  id: number;
+  transactionType: string;
+  amount: string;
+  status: string;
+  createdAt: string;
+  paymentMethodCode: string | null;
+};
+
+export async function getTransactionsByOrderId(orderId: number) {
+  const sql = getDb();
+  const rows = await sql`
+    SELECT
+      id,
+      transaction_type as "transactionType",
+      amount::text as amount,
+      status,
+      created_at as "createdAt",
+      payment_method_code as "paymentMethodCode"
+    FROM transactions
+    WHERE order_id = ${orderId}
+    ORDER BY created_at DESC
+  `;
+  return rows as unknown as TransactionRow[];
+}
 
 export async function getOrderWithItems(orderId: number, branchId: number) {
   const sql = getDb();
@@ -89,6 +118,9 @@ export async function getOrderWithItems(orderId: number, branchId: number) {
       company_name as "companyName",
       customer_phone as "customerPhone",
       customer_email as "customerEmail",
+      delivery_address as "deliveryAddress",
+      latitude,
+      longitude,
       subtotal::text as subtotal,
       discount::text as discount,
       grand_total::text as "grandTotal",
@@ -136,9 +168,13 @@ export async function getOrderWithItems(orderId: number, branchId: number) {
     participants = plist as unknown as OrderParticipantRow[];
   }
 
+  const transactions = await getTransactionsByOrderId(orderId);
+
   return {
     order,
     items,
     participants,
+    transactions,
   };
 }
+

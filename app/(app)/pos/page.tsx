@@ -1,20 +1,30 @@
-export default function PosPage() {
+import { getSession } from "@/lib/auth/session";
+import { listCatalogOffers } from "@/lib/db/queries/catalog";
+import { listServices } from "@/lib/db/queries/services";
+import { PosClient } from "./PosClient";
+import { listBranches } from "@/lib/db/queries/master";
+
+export default async function PosPage() {
+  const session = await getSession();
+  const branchId = session?.branchId ?? 1; // Fallback to 1 for demo/safety
+
+  const [catalog, allServices, branches] = await Promise.all([
+    listCatalogOffers({ branchId, limit: 100, offset: 0 }),
+    listServices(),
+    listBranches(),
+  ]);
+
+  // Filter services relevant to this branch or global (branchId null)
+  const services = allServices.filter(
+    (s) => s.branchId === branchId || s.branchId === null
+  );
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">POS / Invoicing</h2>
-        <p className="text-slate-500 text-sm">
-          Placeholder awal (iterasi berikutnya: keranjang multi-item + DP/diskon seperti
-          mock `refs/admin-rq.jsx`).
-        </p>
-      </div>
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <div className="text-sm text-slate-700">
-          Fokus PRD 3.3: toggle B2B/B2C, input lat/lng, multi-item, kalkulasi DP &
-          diskon, generate invoice.
-        </div>
-      </div>
-    </div>
+    <PosClient 
+      branchId={branchId}
+      initialCatalog={catalog}
+      initialServices={services}
+      branches={branches}
+    />
   );
 }
-
