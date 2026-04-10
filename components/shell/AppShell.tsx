@@ -23,7 +23,7 @@ export function AppShell({
   const activeItem = MENU_ITEMS.find((m) => m.id === active);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
       <aside className="w-72 bg-[#1e3a5f] text-white flex flex-col shadow-xl z-20 shrink-0">
         <div className="p-6 pb-8">
           <Link href="/" className="block">
@@ -63,7 +63,7 @@ export function AppShell({
 
         <div className="p-4 border-t border-slate-700 mt-auto bg-[#1a3354]">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white">
               {session.name
                 .split(" ")
                 .slice(0, 2)

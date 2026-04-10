@@ -5,15 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Rumah Qurban Admin",
   description: "Admin Panel Rumah Qurban",
-  icons: {
-    icon: [
-      {
-        url: "/favicon-rq.png",
-        sizes: "57x76",
-        type: "image/png",
-      },
-    ],
-  },
+  icons: "/favicon-rq.png",
 };
 
 export default function RootLayout({
