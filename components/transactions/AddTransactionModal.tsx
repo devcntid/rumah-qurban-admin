@@ -32,7 +32,7 @@ export function AddTransactionModal({
 
   useEffect(() => {
     if (open) {
-      api("/api/master/payment-methods").then((res) => setMethods(res.rows || []));
+      api<{ rows: any[] }>("/api/master/payment-methods").then((res) => setMethods(res.rows || []));
     }
   }, [open]);
 
@@ -44,7 +44,7 @@ export function AddTransactionModal({
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await api(`/api/orders/search?term=${searchTerm}`);
+        const res = await api<any[]>(`/api/orders/search?term=${searchTerm}`);
         setOrders(res);
       } catch (err) {
         console.error(err);

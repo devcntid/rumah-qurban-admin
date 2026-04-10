@@ -95,7 +95,7 @@ export async function listTransactions(filters: {
 
   return {
     rows: rows as unknown as TransactionRow[],
-    total: Number(countRes[0].total),
+    total: Number((countRes as any)[0].total),
   };
 }
 
@@ -162,7 +162,7 @@ export async function getTransactionById(id: number): Promise<TransactionWithDet
     WHERE t.id = ${id}
   `;
 
-  if (rows.length === 0) return null;
+  if ((rows as any).length === 0) return null;
 
   const receipts = await sql`
     SELECT 
@@ -193,7 +193,7 @@ export async function getTransactionById(id: number): Promise<TransactionWithDet
   `;
 
   return {
-    ...(rows[0] as unknown as TransactionRow),
+    ...((rows as any)[0] as TransactionRow),
     receipts: receipts as unknown as PaymentReceiptRow[],
     logs: logs as unknown as PaymentLogRow[],
   };
@@ -230,7 +230,7 @@ export async function upsertTransaction(input: Partial<TransactionRow>) {
     )
     RETURNING id
   `;
-  return res[0].id as number;
+  return (res as any)[0].id as number;
 }
 
 export async function deleteTransaction(id: number) {
@@ -258,31 +258,25 @@ export async function unmatchTransaction(transactionId: number) {
 
 export async function verifyReceipt(receiptId: number, status: string, notes: string | null) {
   const sql = getDb();
-  await sql.begin(async (sql) => {
-    // Update receipt status
-    await sql`
-      UPDATE payment_receipts
-      SET 
-        status = ${status},
-        verifier_notes = ${notes},
-        verified_at = CURRENT_TIMESTAMP
-      WHERE id = ${receiptId}
-    `;
+  
+  // Update receipt status
+  await sql`
+    UPDATE payment_receipts
+    SET 
+      status = ${status},
+      verifier_notes = ${notes},
+      verified_at = CURRENT_TIMESTAMP
+    WHERE id = ${receiptId}
+  `;
 
-    // If approved, optionally update transaction status
-    if (status === "APPROVED") {
-      const res = await sql`
-        SELECT transaction_id FROM payment_receipts WHERE id = ${receiptId}
-      `;
-      if (res.length > 0) {
-        await sql`
-          UPDATE transactions
-          SET status = 'PAID'
-          WHERE id = ${res[0].transaction_id}
-        `;
-      }
-    }
-  });
+  // If approved, update transaction status to PAID
+  if (status === "APPROVED") {
+    await sql`
+      UPDATE transactions
+      SET status = 'PAID'
+      WHERE id = (SELECT transaction_id FROM payment_receipts WHERE id = ${receiptId})
+    `;
+  }
 }
 
 export async function listStandaloneTransactions() {

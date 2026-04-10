@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 
 const COOKIE_NAME = "rq_admin_session";
 
@@ -15,7 +15,7 @@ const PROTECTED_PREFIXES = [
   "/logs",
 ];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
   const isLogin = pathname === "/login";

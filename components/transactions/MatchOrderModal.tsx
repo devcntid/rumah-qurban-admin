@@ -30,7 +30,7 @@ export function MatchOrderModal({
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await api(`/api/orders/search?term=${searchTerm}`);
+        const res = await api<any[]>(`/api/orders/search?term=${searchTerm}`);
         setOrders(res);
       } catch (err) {
         console.error("Failed to search orders", err);

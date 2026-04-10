@@ -39,7 +39,7 @@ export function SystemLogsViewer() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    api("/api/logs").then(res => {
+    api<{ rows: BaseLog[] }>("/api/logs").then(res => {
       setLogs(res.rows || []);
       setLoading(false);
     });

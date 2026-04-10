@@ -24,7 +24,7 @@ export function MatchTransactionModal({
   const fetchStandalone = async () => {
     setLoading(true);
     try {
-      const res = await api(`/api/transactions/standalone`);
+      const res = await api<TransactionRow[]>(`/api/transactions/standalone`);
       setTransactions(res);
     } catch (err) {
       console.error("Failed to fetch standalone transactions", err);
