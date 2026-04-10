@@ -36,7 +36,13 @@
       "when": 4,
       "tag": "0004_schema_v4",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775747552283,
+      "tag": "0005_smart_human_fly",
+      "breakpoints": true
     }
   ]
 }
-

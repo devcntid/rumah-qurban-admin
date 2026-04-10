@@ -229,26 +229,56 @@ export const orderParticipants = pgTable(
   (t) => [index("idx_order_participants_order_item_id").on(t.orderItemId)]
 );
 
+export const farmPens = pgTable(
+  "farm_pens",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    branchId: bigint("branch_id", { mode: "number" }).references(() => branches.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [uniqueIndex("farm_pens_name_branch_uniq").on(t.name, t.branchId)]
+);
+
 export const farmInventories = pgTable(
   "farm_inventories",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
+    generatedId: varchar("generated_id", { length: 50 }).notNull().unique(),
+    farmAnimalId: varchar("farm_animal_id", { length: 50 }),
     eartagId: varchar("eartag_id", { length: 50 }).notNull().unique(),
     animalVariantId: bigint("animal_variant_id", { mode: "number" }).references(
       () => animalVariants.id
     ),
     branchId: bigint("branch_id", { mode: "number" }).references(() => branches.id),
     vendorId: bigint("vendor_id", { mode: "number" }).references(() => vendors.id),
-    weightActual: numeric("weight_actual", { precision: 6, scale: 2 }),
+    entryDate: date("entry_date"),
+    acquisitionType: varchar("acquisition_type", { length: 50 }),
+    initialProductType: varchar("initial_product_type", { length: 100 }),
+    penId: bigint("pen_id", { mode: "number" }).references(() => farmPens.id),
+    panName: varchar("pan_name", { length: 50 }),
+    purchasePrice: numeric("purchase_price", { precision: 15, scale: 2 }),
+    initialWeightSource: numeric("initial_weight_source", { precision: 10, scale: 2 }),
+    pricePerKg: numeric("price_per_kg", { precision: 15, scale: 2 }),
+    shippingCost: numeric("shipping_cost", { precision: 15, scale: 2 }),
+    totalHpp: numeric("total_hpp", { precision: 15, scale: 2 }),
+    hornType: varchar("horn_type", { length: 50 }),
+    initialWeight: numeric("initial_weight", { precision: 10, scale: 2 }),
+    initialType: varchar("initial_type", { length: 50 }),
+    finalType: varchar("final_type", { length: 50 }),
+    weightActual: numeric("weight_actual", { precision: 10, scale: 2 }),
     photoUrl: text("photo_url"),
     status: varchar("status", { length: 50 }).default("AVAILABLE"),
     orderItemId: bigint("order_item_id", { mode: "number" }).references(() => orderItems.id),
+    exitDate: date("exit_date"),
     createdAt: timestamp("created_at").defaultNow(),
   },
   (t) => [
     index("idx_farm_inv_branch").on(t.branchId),
     index("idx_farm_inv_variant").on(t.animalVariantId),
     index("idx_farm_inv_status").on(t.status),
+    index("idx_farm_inv_pen").on(t.penId),
+    index("idx_farm_inv_farm_animal_id").on(t.farmAnimalId),
   ]
 );
 

@@ -55,6 +55,17 @@ async function main() {
     const farmAgroId = vendorIdByName("Farm Agrosurya");
 
     await sql`
+      INSERT INTO farm_pens (id, branch_id, name) VALUES
+        (1, ${bandungId}, 'FARM AGROSURYA'),
+        (2, ${bandungId}, 'Kandang A'),
+        (3, ${bandungId}, 'Kandang B'),
+        (4, ${jakartaId}, 'MAJALENGKA')
+      ON CONFLICT (id) DO UPDATE
+      SET branch_id = EXCLUDED.branch_id,
+          name = EXCLUDED.name
+    `;
+
+    await sql`
       INSERT INTO sales_agents (id, name, category, phone) VALUES
         (1, 'Agro Great Indoberkah', 'KEMITRAAN', '08123456789'),
         (2, 'Tim Telemarketing Internal', 'INTERNAL', '0000000000')
@@ -247,19 +258,55 @@ async function main() {
     `;
 
     await sql`
-      INSERT INTO farm_inventories (id, eartag_id, animal_variant_id, branch_id, vendor_id, weight_actual, photo_url, status, order_item_id, created_at)
-      VALUES
-        (1, 'TAG-1001', 4, 1, 1, 24.50, NULL, 'ALLOCATED', 3, '2026-05-01 08:00:00'),
-        (2, 'TAG-1002', 4, 1, 1, 25.10, NULL, 'AVAILABLE', NULL, '2026-05-01 08:00:00'),
-        (3, 'TAG-1003', 4, 1, 1, 23.80, NULL, 'AVAILABLE', NULL, '2026-05-01 08:00:00'),
-        (4, 'TAG-2001', 6, 117, 2, 25.00, NULL, 'ALLOCATED', 5, '2026-05-23 09:00:00')
+      INSERT INTO farm_inventories (
+        id, generated_id, farm_animal_id, eartag_id, animal_variant_id, branch_id, vendor_id, 
+        entry_date, acquisition_type, initial_product_type, pen_id, pan_name, 
+        purchase_price, initial_weight_source, price_per_kg, shipping_cost, total_hpp, 
+        horn_type, initial_weight, initial_type, final_type, weight_actual, 
+        photo_url, status, order_item_id, created_at
+      ) VALUES
+        (1, 'RQ26A001', 'JT001', 'TAG-1001', 4, ${bandungId}, ${farmAgroId}, 
+         '2026-01-17', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 
+         6035000, 71, 85000, 32222, 6067222, 
+         'TANDUK', 71, 'TIPE F', 'TIPE F', 24.50, 
+         NULL, 'ALLOCATED', 3, '2026-05-01 08:00:00'),
+        (2, 'RQ26A002', 'JT002', 'TAG-1002', 4, ${bandungId}, ${farmAgroId}, 
+         '2026-01-17', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 
+         5695000, 67, 85000, 32222, 5727222, 
+         'TANDUK', 67, 'TIPE F', 'TIPE F', 25.10, 
+         NULL, 'AVAILABLE', NULL, '2026-05-01 08:00:00'),
+        (3, 'RQ26A003', 'JT003', 'TAG-1003', 4, ${bandungId}, ${farmAgroId}, 
+         '2026-01-17', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 
+         4573000, 53.8, 85000, 32222, 4605222, 
+         'TANDUK', 53.8, 'TIPE F', 'TIPE F', 23.80, 
+         NULL, 'AVAILABLE', NULL, '2026-05-01 08:00:00'),
+        (4, 'RQ26B001', 'QB001', 'TAG-2001', 6, ${jakartaId}, 2, 
+         '2026-01-20', 'BOOKING', 'QURBAN BERBAGI', 4, NULL, 
+         5000000, 60, 80000, 40000, 5040000, 
+         'POLL', 60, 'TIPE F', 'TIPE F', 25.00, 
+         NULL, 'ALLOCATED', 5, '2026-05-23 09:00:00')
       ON CONFLICT (id) DO UPDATE
-      SET eartag_id = EXCLUDED.eartag_id,
+      SET generated_id = EXCLUDED.generated_id,
+          farm_animal_id = EXCLUDED.farm_animal_id,
+          eartag_id = EXCLUDED.eartag_id,
           animal_variant_id = EXCLUDED.animal_variant_id,
           branch_id = EXCLUDED.branch_id,
           vendor_id = EXCLUDED.vendor_id,
+          entry_date = EXCLUDED.entry_date,
+          acquisition_type = EXCLUDED.acquisition_type,
+          initial_product_type = EXCLUDED.initial_product_type,
+          pen_id = EXCLUDED.pen_id,
+          pan_name = EXCLUDED.pan_name,
+          purchase_price = EXCLUDED.purchase_price,
+          initial_weight_source = EXCLUDED.initial_weight_source,
+          price_per_kg = EXCLUDED.price_per_kg,
+          shipping_cost = EXCLUDED.shipping_cost,
+          total_hpp = EXCLUDED.total_hpp,
+          horn_type = EXCLUDED.horn_type,
+          initial_weight = EXCLUDED.initial_weight,
+          initial_type = EXCLUDED.initial_type,
+          final_type = EXCLUDED.final_type,
           weight_actual = EXCLUDED.weight_actual,
-          photo_url = EXCLUDED.photo_url,
           status = EXCLUDED.status,
           order_item_id = EXCLUDED.order_item_id,
           created_at = EXCLUDED.created_at
