@@ -253,28 +253,59 @@ export default function FarmClient({
     XLSX.writeFile(wb, `Inventaris_Farm_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const executeDownloadTemplate = (context: { penId?: number; vendorId?: number }) => {
-    const headers = [
-      ["ID HEWAN FARM", "ID HEWAN (Eartag)", "JENIS PENGADAAN", "PRODUCT AWAL", "KANDANG_ID", "VENDOR_ID", "HARGA BELI", "BOBOT AWAL", "JENIS TANDUK", "Keterangan"],
-      ["JT001", "TAG-1001", "MANDIRI", "QURBAN ANTAR", String(context.penId || "1"), String(context.vendorId || "1"), "6000000", "70", "TANDUK", "Isi ID Kandang & Vendor sesuai list alat bantu ->"],
-    ];
+  const executeDownloadTemplate = (context: { 
+    penId?: number; 
+    vendorId?: number; 
+    animalVariantId?: number; 
+    quantity?: number;
+  }) => {
+    const qty = context.quantity || 1;
     
-    // Add helper sheets or columns for Vendor & Pen
-    const vendorHelp = vendors.map(v => [v.id, v.name]);
-    const penHelp = pens.map(p => [p.id, p.name]);
-    
-    const ws = XLSX.utils.aoa_to_sheet(headers);
-    XLSX.utils.sheet_add_aoa(ws, [["", "", "", "", "", "", "", "", "", ""]], { origin: -1 });
-    XLSX.utils.sheet_add_aoa(ws, [["ALAT BANTU (TIDAK UNTUK DIUPLOAD):", ""]], { origin: "L1" });
-    XLSX.utils.sheet_add_aoa(ws, [["ID KANDANG", "NAMA KANDANG"]], { origin: "L2" });
-    XLSX.utils.sheet_add_aoa(ws, penHelp, { origin: "L3" });
-    
-    XLSX.utils.sheet_add_aoa(ws, [["ID VENDOR", "NAMA VENDOR"]], { origin: "O2" });
-    XLSX.utils.sheet_add_aoa(ws, vendorHelp, { origin: "O3" });
+    // Find Names for ID Helpers (Yellow Columns)
+    const pen = pens.find(p => p.id === context.penId);
+    const vendor = vendors.find(v => v.id === context.vendorId);
+    const variant = variants.find(v => v.id === context.animalVariantId);
 
+    const headers = [
+      "PEN_ID (ID KANDANG)", 
+      "PEN_NAME (NAMA KANDANG)", 
+      "VENDOR_ID (ID VENDOR)", 
+      "VENDOR_NAME (NAMA VENDOR)", 
+      "VARIANT_ID (ID VARIAN)", 
+      "VARIANT_NAME (NAMA VARIAN)", 
+      "FARM_ANIMAL_ID (ID HEWAN FARM)", 
+      "TAG_ID (ID TAG / EARTAG)", 
+      "ACQUISITION_TYPE (JENIS PENGADAAN)", 
+      "INITIAL_PRODUCT (PRODUK AWAL)", 
+      "PURCHASE_PRICE (HARGA BELI)", 
+      "INITIAL_WEIGHT (BOBOT AWAL)", 
+      "HORN_TYPE (JENIS TANDUK)", 
+      "NOTES (KETERANGAN)"
+    ];
+
+    const rows = Array.from({ length: qty }).map(() => [
+      context.penId || "", 
+      pen?.name || "", 
+      context.vendorId || "", 
+      vendor?.name || "", 
+      context.animalVariantId || "", 
+      variant ? `${variant.species} - ${variant.classGrade} (${variant.weightRange})` : "",
+      "", // farm_animal_id (Blue - Leave empty as per user request)
+      "", // tag_id (White)
+      "MANDIRI", // Default suggestion
+      "QURBAN ANTAR", // Default suggestion
+      "", // purchase_price
+      "", // initial_weight
+      "TANDUK", // Default suggestion
+      "" // notes
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template Upload");
-    XLSX.writeFile(wb, "Template_Upload_Farm.xlsx");
+    XLSX.writeFile(wb, "Template_Upload_Farm_Guided.xlsx");
+    toast.success(`Template dengan ${qty} baris berhasil di-generate`);
   };
 
   const handleImport = (e: any) => {
@@ -286,28 +317,49 @@ export default function FarmClient({
       const wb = XLSX.read(bstr, { type: "binary" });
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
-      const data: any[] = XLSX.utils.sheet_to_json(ws);
+      const data: any[] = XLSX.utils.sheet_to_json(ws); // Header is now in the first row (index 0)
       
+      let importedCount = 0;
+      let errorCount = 0;
+
       startTransition(async () => {
         for (const row of data) {
-          const payload = {
-            branchId,
-            farmAnimalId: String(row["ID HEWAN FARM"] || ""),
-            eartagId: String(row["ID HEWAN (Eartag)"] || ""),
-            acquisitionType: row["JENIS PENGADAAN"],
-            initialProductType: row["PRODUCT AWAL"],
-            penId: row["KANDANG_ID"],
-            vendorId: row["VENDOR_ID"],
-            purchasePrice: row["HARGA BELI"],
-            initialWeight: row["BOBOT AWAL"],
-            hornType: row["JENIS TANDUK"],
-            status: "AVAILABLE",
-          };
-          if (payload.eartagId) await saveInventoryAction(payload);
+          try {
+            const payload = {
+              branchId,
+              farmAnimalId: String(row["FARM_ANIMAL_ID (ID HEWAN FARM)"] || row["FARM_ANIMAL_ID"] || row["ID HEWAN FARM"] || ""),
+              eartagId: String(row["TAG_ID (ID TAG / EARTAG)"] || row["TAG_ID"] || row["ID HEWAN (Eartag)"] || ""),
+              acquisitionType: row["ACQUISITION_TYPE (JENIS PENGADAAN)"] || row["ACQUISITION_TYPE"] || row["JENIS PENGADAAN"],
+              initialProductType: row["INITIAL_PRODUCT (PRODUK AWAL)"] || row["INITIAL_PRODUCT"] || row["PRODUCT AWAL"],
+              penId: row["PEN_ID (ID KANDANG)"] || row["PEN_ID"] || row["KANDANG_ID"],
+              vendorId: row["VENDOR_ID (ID VENDOR)"] || row["VENDOR_ID"],
+              animalVariantId: row["VARIANT_ID (ID VARIAN)"] || row["VARIANT_ID"],
+              purchasePrice: row["PURCHASE_PRICE (HARGA BELI)"] || row["PURCHASE_PRICE"] || row["HARGA BELI"],
+              initialWeight: row["INITIAL_WEIGHT (BOBOT AWAL)"] || row["INITIAL_WEIGHT"] || row["BOBOT AWAL"],
+              hornType: row["HORN_TYPE (JENIS TANDUK)"] || row["HORN_TYPE"] || row["JENIS TANDUK"],
+              status: "AVAILABLE",
+            };
+
+            // Requirement: Must have eartag or farm_animal_id to be valid
+            if (payload.eartagId || payload.farmAnimalId) {
+              await saveInventoryAction(payload);
+              importedCount++;
+            }
+          } catch (err) {
+            console.error("Import row error:", err);
+            errorCount++;
+          }
+        }
+        
+        if (errorCount > 0) {
+          toast.warning(`Import selesai: ${importedCount} berhasil, ${errorCount} gagal.`);
+        } else {
+          toast.success(`Berhasil mengimport ${importedCount} data hewan.`);
         }
       });
     };
     reader.readAsBinaryString(file);
+    e.target.value = ""; // Reset input
   };
 
   const filterFields: any[] = [
@@ -564,6 +616,7 @@ export default function FarmClient({
         onDownload={executeDownloadTemplate}
         pens={pens}
         vendors={vendors}
+        variants={variants}
       />
 
       {/* SINGLE ENTRY INVENTORY MODAL */}

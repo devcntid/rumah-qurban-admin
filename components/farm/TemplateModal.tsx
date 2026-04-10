@@ -11,22 +11,36 @@ export function TemplateModal({
   onDownload,
   pens,
   vendors,
+  variants,
 }: {
   open: boolean;
   onClose: () => void;
-  onDownload: (context: { penId?: number; vendorId?: number }) => void;
+  onDownload: (context: { 
+    penId?: number; 
+    vendorId?: number;
+    animalVariantId?: number;
+    quantity?: number;
+  }) => void;
   pens: { id: number; name: string }[];
   vendors: { id: number; name: string }[];
+  variants: { id: number; species: string; classGrade: string | null; weightRange: string | null }[];
 }) {
   const [selectedPen, setSelectedPen] = useState<number | undefined>();
   const [selectedVendor, setSelectedVendor] = useState<number | undefined>();
+  const [selectedVariant, setSelectedVariant] = useState<number | undefined>();
+  const [quantity, setQuantity] = useState<number>(1);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = () => {
     setIsDownloading(true);
     // Simulate a brief delay for UI feedback
     setTimeout(() => {
-      onDownload({ penId: selectedPen, vendorId: selectedVendor });
+      onDownload({ 
+        penId: selectedPen, 
+        vendorId: selectedVendor,
+        animalVariantId: selectedVariant,
+        quantity: quantity
+      });
       setIsDownloading(false);
       onClose();
     }, 500);
@@ -40,21 +54,42 @@ export function TemplateModal({
         </p>
 
         <div className="space-y-4">
-          <SearchableSelect
-            label="Pilih Kandang (Opsional)"
-            placeholder="— Pilih Kandang —"
-            options={pens.map((p) => ({ label: p.name, value: p.id }))}
-            value={selectedPen}
-            onChange={(val) => setSelectedPen(val as number)}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <SearchableSelect
+              label="Pilih Kandang (Opsional)"
+              placeholder="— Pilih —"
+              options={pens.map((p) => ({ label: p.name, value: p.id }))}
+              value={selectedPen}
+              onChange={(val) => setSelectedPen(val as number)}
+            />
+            <SearchableSelect
+              label="Pilih Vendor (Opsional)"
+              placeholder="— Pilih —"
+              options={vendors.map((v) => ({ label: v.name, value: v.id }))}
+              value={selectedVendor}
+              onChange={(val) => setSelectedVendor(val as number)}
+            />
+          </div>
 
           <SearchableSelect
-            label="Pilih Vendor (Opsional)"
-            placeholder="— Pilih Vendor —"
-            options={vendors.map((v) => ({ label: v.name, value: v.id }))}
-            value={selectedVendor}
-            onChange={(val) => setSelectedVendor(val as number)}
+            label="Pilih Varian (Opsional)"
+            placeholder="— Pilih Varian —"
+            options={variants.map((v) => ({ label: `${v.species} - ${v.classGrade} (${v.weightRange})`, value: v.id }))}
+            value={selectedVariant}
+            onChange={(val) => setSelectedVariant(val as number)}
           />
+
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block">Jumlah Baris (Qty)</label>
+            <input 
+              type="number" 
+              min="1" 
+              max="1000"
+              className="w-full border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all" 
+              value={quantity} 
+              onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} 
+            />
+          </div>
         </div>
 
         <div className="flex gap-3 pt-4">
