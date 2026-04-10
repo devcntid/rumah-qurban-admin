@@ -167,7 +167,7 @@ export async function countFarmInventories(params: {
   }
 
   const res = await query;
-  return parseInt((res[0] as any).count);
+  return parseInt((res as any)[0].count);
 }
 
 export type FarmPenRow = {
@@ -249,7 +249,7 @@ export async function upsertFarmInventory(input: Partial<FarmInventoryRow>) {
       )
       RETURNING id
     `;
-    return (res[0] as any).id;
+    return (res as any)[0].id;
   }
 }
 
@@ -274,7 +274,7 @@ export async function upsertFarmPen(input: { id?: number; branchId: number; name
       VALUES (${input.branchId}, ${input.name})
       RETURNING id
     `;
-    return (res[0] as any).id;
+    return (res as any)[0].id;
   }
 }
 
