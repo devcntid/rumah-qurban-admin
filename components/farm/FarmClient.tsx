@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { TemplateModal } from "./TemplateModal";
@@ -21,13 +21,98 @@ import {
   bulkSaveInventoryAction, 
   deleteInventoryAction,
   savePenAction,
-  deletePenAction
+  deletePenAction,
+  patchEartagAction
 } from "@/lib/actions/farm";
 import { Pagination } from "@/components/ui/Pagination";
 import { FiltersBar } from "@/components/ui/FiltersBar";
 import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
 type Tab = "inventory" | "pens";
+function InlineEartagEdit({ 
+  id, 
+  value, 
+  onSave 
+}: { 
+  id: number; 
+  value: string; 
+  onSave: (id: number, newValue: string) => Promise<void> 
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setCurrentValue(value);
+  }, [value]);
+
+  const handleSave = async () => {
+    if (currentValue === value) {
+      setIsEditing(false);
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      await onSave(id, currentValue);
+      toast.success("Tag ID berhasil diperbarui");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to save eartag:", error);
+      alert("Gagal menyimpan Tag ID");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      setCurrentValue(value);
+      setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="relative flex items-center">
+        <input
+          autoFocus
+          type="text"
+          className="w-32 px-2 py-1 bg-white border-2 border-blue-500 rounded-lg text-xs font-mono font-bold outline-none shadow-sm"
+          value={currentValue}
+          onChange={(e) => setCurrentValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          disabled={isSaving}
+        />
+        {isSaving && (
+          <div className="absolute right-2">
+            <Loader2 size={12} className="animate-spin text-blue-500" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setIsEditing(true)}
+      className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-200 text-xs font-mono font-bold transition-all"
+      title="Click to edit Tag ID"
+    >
+      <span>{value}</span>
+      <Pencil size={10} className="text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
+      {isSaving && (
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+          <Loader2 size={12} className="animate-spin text-blue-500" />
+        </div>
+      )}
+    </button>
+  );
+}
 
 export default function FarmClient({
   initialData,
@@ -91,6 +176,7 @@ export default function FarmClient({
   const handleSave = async () => {
     startTransition(async () => {
       await saveInventoryAction(formData);
+      toast.success(selectedItem ? "Data inventaris diperbarui" : "Data inventaris ditambahkan");
       setIsModalOpen(false);
     });
   };
@@ -101,6 +187,7 @@ export default function FarmClient({
         eartagId: `TEMP-${Date.now()}-${i}`,
       }));
       await bulkSaveInventoryAction(commonBulk, items);
+      toast.success(`${bulkQty} record hewan berhasil digenerate`);
       setIsBulkModalOpen(false);
     });
   };
@@ -109,6 +196,7 @@ export default function FarmClient({
     if (!confirm("Hapus data ini?")) return;
     startTransition(async () => {
       await deleteInventoryAction(id);
+      toast.success("Data inventaris dihapus");
     });
   };
 
@@ -123,6 +211,7 @@ export default function FarmClient({
     if (!penFormData.name) return alert("Nama kandang wajib diisi");
     startTransition(async () => {
       await savePenAction(penFormData);
+      toast.success(selectedPen ? "Data kandang diperbarui" : "Kandang baru ditambahkan");
       setIsPenModalOpen(false);
     });
   };
@@ -131,6 +220,7 @@ export default function FarmClient({
     if (!confirm("Hapus kandang ini?")) return;
     startTransition(async () => {
       await deletePenAction(id);
+      toast.success("Kandang berhasil dihapus");
     });
   };
 
@@ -353,9 +443,13 @@ export default function FarmClient({
                       </td>
                       <td className="p-5 font-semibold text-slate-700">{item.farmAnimalId || "—"}</td>
                       <td className="p-5">
-                        <span className="px-3 py-1.5 bg-slate-100 rounded-lg border border-slate-200 text-xs font-mono font-bold">
-                          {item.eartagId}
-                        </span>
+                        <InlineEartagEdit 
+                          id={item.id} 
+                          value={item.eartagId} 
+                          onSave={async (id, val) => {
+                            await patchEartagAction(id, val);
+                          }}
+                        />
                       </td>
                       <td className="p-5">
                         <div className="text-xs font-black text-[#102a43]">{item.species}</div>

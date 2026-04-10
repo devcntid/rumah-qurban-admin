@@ -178,3 +178,26 @@ export async function getOrderWithItems(orderId: number, branchId: number) {
   };
 }
 
+export async function searchOrders(term: string) {
+  const sql = getDb();
+  const search = `%${term}%`;
+  const rows = await sql`
+    SELECT 
+      id,
+      invoice_number as "invoiceNumber",
+      customer_name as "customerName",
+      grand_total::text as "grandTotal",
+      status
+    FROM orders
+    WHERE invoice_number ILIKE ${search} OR customer_name ILIKE ${search}
+    ORDER BY created_at DESC
+    LIMIT 20
+  `;
+  return rows as unknown as {
+    id: number;
+    invoiceNumber: string;
+    customerName: string;
+    grandTotal: string;
+    status: string;
+  }[];
+}

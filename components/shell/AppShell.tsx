@@ -23,17 +23,18 @@ export function AppShell({
   const activeItem = MENU_ITEMS.find((m) => m.id === active);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
       <aside className="w-72 bg-[#1e3a5f] text-white flex flex-col shadow-xl z-20 shrink-0">
         <div className="p-6 pb-8">
-          <div className="flex items-center gap-2 mb-1">
-            <Heart className="text-red-500 fill-red-500" size={28} />
-            <span className="font-bold text-2xl tracking-tight">
-              rumah<span className="text-red-500">qurban</span>
-            </span>
-          </div>
-          <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest pl-9">
-            Admin Panel
+          <Link href="/" className="block">
+            <img 
+              src="/logo-agro.png" 
+              alt="Rumah Qurban Logo" 
+              className="h-10 w-auto brightness-0 invert" 
+            />
+          </Link>
+          <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-2 pl-0.5 opacity-80">
+            Admin Management Panel
           </p>
         </div>
 
@@ -51,13 +52,16 @@ export function AppShell({
                     : "text-slate-200 hover:bg-slate-800/50 hover:text-white"
                 }`}
               >
-                {item.icon} {item.label}
+                <span className={isActive ? "text-white" : "text-slate-300"}>
+                  {item.icon}
+                </span>
+                {item.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-700 mt-auto">
+        <div className="p-4 border-t border-slate-700 mt-auto bg-[#1a3354]">
           <div className="flex items-center gap-3 mb-4 px-2">
             <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center font-bold">
               {session.name
@@ -70,7 +74,7 @@ export function AppShell({
             <div>
               <p className="text-sm font-bold leading-tight">{session.name}</p>
               <p className="text-[10px] text-slate-300">
-                {session.role} • Branch {session.branchId}
+                {session.role} • Cabang {session.branchId}
               </p>
             </div>
           </div>

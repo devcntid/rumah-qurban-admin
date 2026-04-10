@@ -219,6 +219,9 @@ export type PaymentMethodRow = {
   name: string;
   category: string;
   coaCode: string | null;
+  accountHolderName: string | null;
+  bankName: string | null;
+  accountNumber: string | null;
   isActive: boolean;
 };
 
@@ -231,6 +234,9 @@ export async function listPaymentMethods() {
       name,
       category,
       coa_code as "coaCode",
+      account_holder_name as "accountHolderName",
+      bank_name as "bankName",
+      account_number as "accountNumber",
       is_active as "isActive"
     FROM payment_methods
     ORDER BY id ASC
@@ -244,29 +250,57 @@ export async function upsertPaymentMethod(input: {
   name: string;
   category: string;
   coaCode?: string | null;
+  accountHolderName?: string | null;
+  bankName?: string | null;
+  accountNumber?: string | null;
   isActive?: boolean;
 }) {
   const sql = getDb();
   if (input.id) {
     await sql`
-      INSERT INTO payment_methods (id, code, name, category, coa_code, is_active)
-      VALUES (${input.id}, ${input.code}, ${input.name}, ${input.category}, ${input.coaCode ?? null}, ${input.isActive ?? true})
+      INSERT INTO payment_methods (id, code, name, category, coa_code, account_holder_name, bank_name, account_number, is_active)
+      VALUES (
+        ${input.id}, 
+        ${input.code}, 
+        ${input.name}, 
+        ${input.category}, 
+        ${input.coaCode ?? null},
+        ${input.accountHolderName ?? null},
+        ${input.bankName ?? null},
+        ${input.accountNumber ?? null},
+        ${input.isActive ?? true}
+      )
       ON CONFLICT (id) DO UPDATE
       SET code = EXCLUDED.code,
           name = EXCLUDED.name,
           category = EXCLUDED.category,
           coa_code = EXCLUDED.coa_code,
+          account_holder_name = EXCLUDED.account_holder_name,
+          bank_name = EXCLUDED.bank_name,
+          account_number = EXCLUDED.account_number,
           is_active = EXCLUDED.is_active
     `;
     return;
   }
   await sql`
-    INSERT INTO payment_methods (code, name, category, coa_code, is_active)
-    VALUES (${input.code}, ${input.name}, ${input.category}, ${input.coaCode ?? null}, ${input.isActive ?? true})
+    INSERT INTO payment_methods (code, name, category, coa_code, account_holder_name, bank_name, account_number, is_active)
+    VALUES (
+      ${input.code}, 
+      ${input.name}, 
+      ${input.category}, 
+      ${input.coaCode ?? null},
+      ${input.accountHolderName ?? null},
+      ${input.bankName ?? null},
+      ${input.accountNumber ?? null},
+      ${input.isActive ?? true}
+    )
     ON CONFLICT (code) DO UPDATE
     SET name = EXCLUDED.name,
         category = EXCLUDED.category,
         coa_code = EXCLUDED.coa_code,
+        account_holder_name = EXCLUDED.account_holder_name,
+        bank_name = EXCLUDED.bank_name,
+        account_number = EXCLUDED.account_number,
         is_active = EXCLUDED.is_active
   `;
 }

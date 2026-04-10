@@ -4,7 +4,8 @@ import {
   upsertFarmInventory, 
   deleteFarmInventory, 
   upsertFarmPen, 
-  deleteFarmPen 
+  deleteFarmPen,
+  updateFarmEartag
 } from "@/lib/db/queries/farm";
 import { revalidatePath } from "next/cache";
 import { generateAlphanumericId } from "@/lib/utils/id";
@@ -46,5 +47,11 @@ export async function savePenAction(formData: { id?: number; branchId: number; n
 
 export async function deletePenAction(id: number) {
   await deleteFarmPen(id);
+  revalidatePath("/farm");
+}
+
+export async function patchEartagAction(id: number, eartagId: string) {
+  if (!eartagId) throw new Error("Eartag ID is required");
+  await updateFarmEartag(id, eartagId);
   revalidatePath("/farm");
 }

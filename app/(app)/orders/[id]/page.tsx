@@ -6,6 +6,7 @@ import {
   ShoppingCart, ListChecks, Calendar, CheckCircle2, Clock, MapIcon
 } from "lucide-react";
 import Link from "next/link";
+import { OrderTransactionsSection } from "./OrderTransactionsSection";
 
 function formatIDR(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -135,35 +136,11 @@ export default async function OrderDetailPage({
         </div>
 
         {/* Payment History */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-md flex flex-col">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Clock size={14} className="text-purple-500"/> Riwayat Pembayaran
-          </h4>
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar-light">
-            {transactions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full opacity-20 py-4">
-                <Receipt size={30}/>
-                <p className="text-[10px] font-black uppercase mt-2">Belum ada bayar</p>
-              </div>
-            ) : (
-              transactions.map((tx) => (
-                <div key={tx.id} className="relative pl-6 pb-4 last:pb-0">
-                  <div className="absolute left-0 top-1 w-2 h-2 rounded-full bg-blue-500 shadow-md shadow-blue-500/20"></div>
-                  <div className="absolute left-[3.5px] top-3 w-[1px] h-full bg-slate-100 last:hidden"></div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-black text-slate-800 leading-none">{tx.transactionType}</p>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1.5">{new Date(tx.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })} • {tx.paymentMethodCode ?? "Transfer"}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-black text-green-600">{formatIDR(tx.amount)}</p>
-                      <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-black uppercase tracking-widest">{tx.status}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        <div className="md:col-span-1">
+          <OrderTransactionsSection 
+            orderId={order.id} 
+            initialTransactions={transactions} 
+          />
         </div>
       </div>
 

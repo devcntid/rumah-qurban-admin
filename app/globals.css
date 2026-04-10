@@ -28,3 +28,32 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: #ffffff !important;
+    color: #0f172a !important; /* slate-900 */
+    border-color: #cbd5e1 !important; /* slate-300 */
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #3b82f6 !important; /* blue-500 */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    outline: none !important;
+  }
+
+  input::placeholder {
+    color: #94a3b8 !important; /* slate-400 */
+    opacity: 1 !important;
+  }
+
+  /* Force slate-100 buttons to have dark text */
+  .bg-slate-100 {
+    background-color: rgba(241, 245, 249, 1) !important;
+    color: #334155 !important; /* slate-700 */
+  }
+}

@@ -223,6 +223,7 @@ export function MasterCrud({
                 <th className="p-4">Code</th>
                 <th className="p-4">Nama</th>
                 <th className="p-4">Kategori</th>
+                <th className="p-4">Bank / Rek</th>
                 <th className="p-4">COA</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-center">Aksi</th>
@@ -235,6 +236,10 @@ export function MasterCrud({
                   <td className="p-4 font-mono text-xs text-blue-600">{p.code}</td>
                   <td className="p-4 font-semibold text-slate-800">{p.name}</td>
                   <td className="p-4 text-slate-600">{p.category}</td>
+                  <td className="p-4">
+                    <div className="text-xs font-bold text-slate-800">{p.bankName ?? "-"}</div>
+                    <div className="text-[10px] font-mono text-slate-400">{p.accountNumber ?? "-"}</div>
+                  </td>
                   <td className="p-4 font-mono text-xs text-slate-700">{p.coaCode ?? "-"}</td>
                   <td className="p-4">{p.isActive ? "Aktif" : "Nonaktif"}</td>
                   <td className="p-4 text-center">
@@ -821,75 +826,115 @@ export function MasterCrud({
                       name: String(fd.get("name") ?? ""),
                       category: String(fd.get("category") ?? ""),
                       coaCode: String(fd.get("coaCode") ?? ""),
+                      accountHolderName: String(fd.get("accountHolderName") ?? ""),
+                      bankName: String(fd.get("bankName") ?? ""),
+                      accountNumber: String(fd.get("accountNumber") ?? ""),
                       isActive: String(fd.get("isActive") ?? "true") === "true",
                     };
                     await api("/api/master/payment-methods", { method: "POST", json: payload });
                     window.location.reload();
                   })
                 }
-                className="space-y-3"
+                className="space-y-4"
               >
                 <input type="hidden" name="id" value={row?.id ?? ""} />
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">Code</label>
-                  <input
-                    name="code"
-                    aria-label="Code"
-                    defaultValue={row?.code ?? ""}
-                    className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none font-mono"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Code</label>
+                    <input
+                      name="code"
+                      placeholder="Contoh: TF_MANDIRI"
+                      defaultValue={row?.code ?? ""}
+                      className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Kategori</label>
+                    <input
+                      name="category"
+                      placeholder="Contoh: MANUAL_TRANSFER"
+                      defaultValue={row?.category ?? ""}
+                      className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none uppercase"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-600">Nama</label>
+                  <label className="text-xs font-semibold text-slate-600">Nama Tampilan</label>
                   <input
                     name="name"
-                    aria-label="Nama"
+                    placeholder="Contoh: Transfer Bank Mandiri"
                     defaultValue={row?.name ?? ""}
-                    className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none font-bold"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">Kategori</label>
-                  <input
-                    name="category"
-                    aria-label="Kategori"
-                    defaultValue={row?.category ?? ""}
-                    className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"
-                  />
+                
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail Rekening (Manual Transfer)</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                       <label className="text-[10px] font-bold text-slate-500">Nama Bank</label>
+                       <input
+                         name="bankName"
+                         placeholder="Contoh: Bank Mandiri"
+                         defaultValue={row?.bankName ?? ""}
+                         className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"
+                       />
+                    </div>
+                    <div>
+                       <label className="text-[10px] font-bold text-slate-500">Nomor Rekening</label>
+                       <input
+                         name="accountNumber"
+                         placeholder="1234567890"
+                         defaultValue={row?.accountNumber ?? ""}
+                         className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none font-mono"
+                       />
+                    </div>
+                    <div>
+                       <label className="text-[10px] font-bold text-slate-500">Atas Nama</label>
+                       <input
+                         name="accountHolderName"
+                         placeholder="PT Rumah Qurban"
+                         defaultValue={row?.accountHolderName ?? ""}
+                         className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"
+                       />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">COA</label>
-                  <input
-                    name="coaCode"
-                    aria-label="COA"
-                    defaultValue={row?.coaCode ?? ""}
-                    className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">COA</label>
+                    <input
+                      name="coaCode"
+                      placeholder="110-10-101"
+                      defaultValue={row?.coaCode ?? ""}
+                      className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Aktif</label>
+                    <select
+                      name="isActive"
+                      defaultValue={(row?.isActive ?? true) ? "true" : "false"}
+                      className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none bg-white"
+                    >
+                      <option value="true">Aktif</option>
+                      <option value="false">Nonaktif</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">Aktif</label>
-                  <select
-                    name="isActive"
-                    aria-label="Aktif"
-                    defaultValue={(row?.isActive ?? true) ? "true" : "false"}
-                    className="w-full border border-slate-300 rounded-md p-2 text-sm outline-none bg-white"
-                  >
-                    <option value="true">Aktif</option>
-                    <option value="false">Nonaktif</option>
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 pt-4">
                   <button
                     type="button"
                     onClick={close}
-                    className="flex-1 bg-slate-100 text-slate-700 py-2 rounded-md font-semibold hover:bg-slate-200"
+                    className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={pending}
-                    className="flex-1 bg-[#1e3a5f] text-white py-2 rounded-md font-semibold hover:bg-blue-900 disabled:opacity-50"
+                    className="flex-1 bg-[#1e3a5f] text-white py-3 rounded-xl font-bold hover:bg-blue-900 transition-all shadow-lg shadow-blue-900/10 disabled:opacity-50"
                   >
                     Simpan
                   </button>

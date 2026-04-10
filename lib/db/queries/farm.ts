@@ -282,3 +282,11 @@ export async function deleteFarmPen(id: number) {
   const sql = getDb();
   await sql`DELETE FROM farm_pens WHERE id = ${id}`;
 }
+export async function updateFarmEartag(id: number, eartagId: string) {
+  const sql = getDb();
+  await sql`
+    UPDATE farm_inventories 
+    SET eartag_id = ${eartagId} 
+    WHERE id = ${id}
+  `;
+}

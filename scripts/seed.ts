@@ -334,11 +334,11 @@ async function main() {
     `;
 
     await sql`
-      INSERT INTO transactions (id, order_id, payment_method_code, transaction_type, amount, va_number, qr_code_url, status, created_at)
+      INSERT INTO transactions (id, order_id, payment_method_code, transaction_type, amount, va_number, qr_code_url, status, transaction_date, created_at)
       VALUES
-        (1, 1, 'TF_MANDIRI', 'DP', 50000000.00, NULL, NULL, 'VERIFIED', '2026-05-20 10:30:00'),
-        (2, 2, 'XENDIT_VA_MANDIRI', 'PELUNASAN', 3150000.00, NULL, NULL, 'SUCCESS', '2026-05-21 11:05:00'),
-        (3, 3, 'XENDIT_QRIS', 'PELUNASAN', 2500000.00, NULL, NULL, 'SUCCESS', '2026-05-22 08:05:00')
+        (1, 1, 'TF_MANDIRI', 'DP', 50000000.00, NULL, NULL, 'VERIFIED', '2026-05-20 10:30:00', '2026-05-20 10:30:00'),
+        (2, 2, 'XENDIT_VA_MANDIRI', 'PELUNASAN', 3150000.00, NULL, NULL, 'SUCCESS', '2026-05-21 11:05:00', '2026-05-21 11:05:00'),
+        (3, 3, 'XENDIT_QRIS', 'PELUNASAN', 2500000.00, NULL, NULL, 'SUCCESS', '2026-05-22 08:05:00', '2026-05-22 08:05:00')
       ON CONFLICT (id) DO UPDATE
       SET order_id = EXCLUDED.order_id,
           payment_method_code = EXCLUDED.payment_method_code,
@@ -347,7 +347,41 @@ async function main() {
           va_number = EXCLUDED.va_number,
           qr_code_url = EXCLUDED.qr_code_url,
           status = EXCLUDED.status,
+          transaction_date = EXCLUDED.transaction_date,
           created_at = EXCLUDED.created_at
+    `;
+
+    await sql`
+      INSERT INTO payment_receipts (id, transaction_id, file_url, status, verifier_notes, uploaded_at)
+      VALUES
+        (1, 1, 'https://images.pexels.com/photos/164501/pexels-photo-164501.jpeg?auto=compress&cs=tinysrgb&w=600', 'APPROVED', 'DP Telkom has been verified.', '2026-05-20 10:35:00')
+      ON CONFLICT (id) DO UPDATE
+      SET transaction_id = EXCLUDED.transaction_id,
+          file_url = EXCLUDED.file_url,
+          status = EXCLUDED.status,
+          verifier_notes = EXCLUDED.verifier_notes,
+          uploaded_at = EXCLUDED.uploaded_at
+    `;
+
+    await sql`
+      INSERT INTO payment_logs (id, transaction_id, reference_id, log_type, payload, response)
+      VALUES
+        (
+          1, 2, 'XND-VA-12345', 'CALLBACK_RECEIVED', 
+          '{"external_id": "VA_MANDIRI_3150000", "amount": 3150000, "status": "COMPLETED"}'::jsonb,
+          '{"status": "processed"}'::jsonb
+        ),
+        (
+          2, 3, 'XND-QRIS-67890', 'QRIS_PAID', 
+          '{"qr_id": "QR-001", "amount": 2500000, "channel": "SHOPEEPAY"}'::jsonb,
+          '{"status": "success"}'::jsonb
+        )
+      ON CONFLICT (id) DO UPDATE
+      SET transaction_id = EXCLUDED.transaction_id,
+          reference_id = EXCLUDED.reference_id,
+          log_type = EXCLUDED.log_type,
+          payload = EXCLUDED.payload,
+          response = EXCLUDED.response
     `;
 
     await sql`

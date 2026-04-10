@@ -62,6 +62,9 @@ export const paymentMethods = pgTable("payment_methods", {
   name: varchar("name", { length: 100 }).notNull(),
   category: varchar("category", { length: 50 }).notNull(),
   coaCode: varchar("coa_code", { length: 50 }),
+  accountHolderName: varchar("account_holder_name", { length: 100 }),
+  bankName: varchar("bank_name", { length: 100 }),
+  accountNumber: varchar("account_number", { length: 50 }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -357,6 +360,7 @@ export const transactions = pgTable(
     vaNumber: varchar("va_number", { length: 50 }),
     qrCodeUrl: text("qr_code_url"),
     status: varchar("status", { length: 50 }).default("PENDING"),
+    transactionDate: timestamp("transaction_date").defaultNow(),
     createdAt: timestamp("created_at").defaultNow(),
   },
   (t) => [index("idx_transactions_order_id").on(t.orderId)]

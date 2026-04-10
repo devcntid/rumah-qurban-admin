@@ -56,8 +56,8 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "finance",
-    label: "Verifikasi Pembayaran",
-    href: "/finance",
+    label: "Transaksi",
+    href: "/transactions",
     icon: <Wallet size={20} />,
   },
   {
