@@ -28,7 +28,7 @@ import {
 import { bulkAllocateAction } from "@/lib/actions/allocations";
 import { BulkMatchModal } from "./BulkMatchModal";
 import { Pagination } from "@/components/ui/Pagination";
-import { FiltersBar } from "@/components/ui/FiltersBar";
+import { FiltersBar, FilterField } from "@/components/ui/FiltersBar";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -458,7 +458,7 @@ export default function FarmClient({
     e.target.value = ""; // Reset input
   };
 
-  const filterFields: any[] = [
+  const filterFields: FilterField[] = [
     { key: "search", label: "Cari (Tag/Farm ID)", type: "text", placeholder: "Cari..." },
     { 
       key: "vendorId", 

@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth/session";
 import { asNumber, asString } from "@/lib/db/filters";
 import { getPageParams } from "@/lib/db/pagination";
 import { listSalesTargets, listTargetVsActual, countSalesTargets } from "@/lib/db/queries/targets";
-import { FiltersBar } from "@/components/ui/FiltersBar";
+import { FiltersBar, FilterField } from "@/components/ui/FiltersBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { TargetsCrud } from "@/app/(app)/targets/TargetsCrud";
 
@@ -119,7 +119,7 @@ export default async function TargetsPage({
               { label: "QK", value: "QK" },
             ],
           },
-        ]}
+        ] as FilterField[]}
       />
 
       <div className="grid grid-cols-3 gap-4">

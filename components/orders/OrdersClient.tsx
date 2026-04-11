@@ -14,7 +14,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
-import { FiltersBar } from "@/components/ui/FiltersBar";
+import { FiltersBar, FilterField } from "@/components/ui/FiltersBar";
 import * as XLSX from "xlsx";
 import { OrderListRow } from "@/lib/db/queries/orders";
 import { deleteOrderAction } from "@/lib/actions/orders";
@@ -87,7 +87,7 @@ export default function OrdersClient({
     XLSX.writeFile(wb, `Orders_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const filterFields: any[] = [
+  const filterFields: FilterField[] = [
     { key: "q", label: "Cari Invoice/Nama/HP", type: "text", placeholder: "Cari..." },
     { key: "startDate", label: "Dari Tanggal", type: "date" },
     { key: "endDate", label: "Hingga Tanggal", type: "date" },

@@ -22,7 +22,7 @@ import {
   bulkSaveCatalogAction 
 } from "@/lib/actions/catalog";
 import { Pagination } from "@/components/ui/Pagination";
-import { FiltersBar } from "@/components/ui/FiltersBar";
+import { FiltersBar, FilterField } from "@/components/ui/FiltersBar";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -182,7 +182,7 @@ export default function PricingClient({
   };
 
   // Filters
-  const filterFields = [
+  const filterFields: FilterField[] = [
     { key: "q", label: "Cari Nama/SKU", type: "text", placeholder: "Cari..." },
     { 
       key: "branchId", 
