@@ -26,7 +26,7 @@ export default async function FarmPage(props: {
   
   const branchIdNum = session?.branchId ?? 1;
   const page = parseInt(searchParams.page ?? "1");
-  const pageSize = parseInt(searchParams.pageSize ?? "20");
+  const pageSize = parseInt(searchParams.pageSize ?? "10");
   const offset = (page - 1) * pageSize;
 
   const filters = {

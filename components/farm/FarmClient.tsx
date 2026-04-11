@@ -55,12 +55,16 @@ function InlineEartagEdit({
     
     setIsSaving(true);
     try {
-      await onSave(id, currentValue);
-      toast.success("Tag ID berhasil diperbarui");
-      setIsEditing(false);
+      const res = await onSave(id, currentValue);
+      if (res?.success) {
+        toast.success("Tag ID berhasil diperbarui");
+        setIsEditing(false);
+      } else {
+        toast.error(res?.error || "Gagal menyimpan Tag ID");
+      }
     } catch (error) {
       console.error("Failed to save eartag:", error);
-      alert("Gagal menyimpan Tag ID");
+      toast.error("Terjadi kesalahan sistem");
     } finally {
       setIsSaving(false);
     }
@@ -81,7 +85,7 @@ function InlineEartagEdit({
         <input
           autoFocus
           type="text"
-          className="w-32 px-2 py-1 bg-white border-2 border-blue-500 rounded-lg text-xs font-mono font-bold outline-none shadow-sm"
+          className="w-28 px-2 py-1 bg-white border-2 border-blue-500 rounded-md text-xs font-mono font-bold outline-none shadow-sm"
           value={currentValue}
           onChange={(e) => setCurrentValue(e.target.value)}
           onBlur={handleSave}
@@ -89,7 +93,7 @@ function InlineEartagEdit({
           disabled={isSaving}
         />
         {isSaving && (
-          <div className="absolute right-2">
+          <div className="absolute right-1">
             <Loader2 size={12} className="animate-spin text-blue-500" />
           </div>
         )}
@@ -100,13 +104,13 @@ function InlineEartagEdit({
   return (
     <button
       onClick={() => setIsEditing(true)}
-      className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-200 text-xs font-mono font-bold transition-all"
+      className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-blue-100 rounded-md border border-slate-200 hover:border-blue-300 text-xs font-mono font-bold text-[#102a43] transition-all shadow-sm"
       title="Click to edit Tag ID"
     >
       <span>{value}</span>
-      <Pencil size={10} className="text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
+      <Pencil size={11} className="text-slate-400 group-hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all" />
       {isSaving && (
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center rounded-md">
           <Loader2 size={12} className="animate-spin text-blue-500" />
         </div>
       )}
@@ -143,6 +147,7 @@ export default function FarmClient({
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isPenModalOpen, setIsPenModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedPen, setSelectedPen] = useState<any>(null);
@@ -175,9 +180,20 @@ export default function FarmClient({
 
   const handleSave = async () => {
     startTransition(async () => {
-      await saveInventoryAction(formData);
-      toast.success(selectedItem ? "Data inventaris diperbarui" : "Data inventaris ditambahkan");
-      setIsModalOpen(false);
+      const res = await saveInventoryAction(formData);
+      if (res.success) {
+        toast.success(selectedItem ? "Data inventaris diperbarui" : "Data inventaris ditambahkan");
+        setIsModalOpen(false);
+      } else {
+        if (res.fieldErrors) {
+          const errorMsg = Object.entries(res.fieldErrors)
+            .map(([field, msgs]) => `${msgs.join(", ")}`)
+            .join(". ");
+          toast.error("Gagal menyimpan", { description: errorMsg });
+        } else {
+          toast.error(res.error || "Gagal menyimpan data");
+        }
+      }
     });
   };
 
@@ -229,28 +245,42 @@ export default function FarmClient({
     const data = initialData.map((item, index) => ({
       "NO": (page - 1) * pageSize + index + 1,
       "generated_id": item.generatedId,
-      "ID HEWAN FARM": item.farmAnimalId,
-      "ID HEWAN (Eartag)": item.eartagId,
-      "TGL MASUK": item.entryDate,
-      "JENIS PENGADAAN": item.acquisitionType,
-      "PRODUCT AWAL": item.initialProductType,
-      "KANDANG": item.penName,
-      "PAN": item.panName,
-      "HARGA BELI/EKOR": item.purchasePrice,
-      "BOBOT AWAL SUMBER": item.initialWeightSource,
-      "HARGA/KG": item.pricePerKg,
-      "ONGKOS KIRIM HEWAN": item.shippingCost,
-      "TOTAL HPP": item.totalHpp,
-      "JENIS (TANDUK)": item.hornType,
-      "BOBOT AWAL": item.initialWeight,
-      "TIMBANG (ACTUAL)": item.weightActual,
-      "STATUS": item.status,
+      "farm_animal_id": item.farmAnimalId,
+      "eartag_id": item.eartagId,
+      "branch_id": item.branchId,
+      "vendor_id": item.vendorId,
+      "vendor_name": item.vendorName,
+      "animal_variant_id": item.animalVariantId,
+      "species": item.species,
+      "class_grade": item.classGrade,
+      "weight_range": item.weightRange,
+      "status": item.status,
+      "entry_date": item.entryDate,
+      "exit_date": item.exitDate,
+      "acquisition_type": item.acquisitionType,
+      "initial_product_type": item.initialProductType,
+      "pen_id": item.penId,
+      "pen_name": item.penName,
+      "pan_name": item.panName,
+      "initial_weight": item.initialWeight,
+      "initial_weight_source": item.initialWeightSource,
+      "weight_actual": item.weightActual,
+      "horn_type": item.hornType,
+      "purchase_price": item.purchasePrice,
+      "price_per_kg": item.pricePerKg,
+      "shipping_cost": item.shippingCost,
+      "total_hpp": item.totalHpp,
+      "initial_type": item.initialType,
+      "final_type": item.finalType,
+      "photo_url": item.photoUrl,
+      "order_item_id": item.orderItemId,
+      "created_at": item.createdAt
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventaris Farm");
-    XLSX.writeFile(wb, `Inventaris_Farm_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `Inventaris_Farm_Full_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const executeDownloadTemplate = (context: { 
@@ -267,44 +297,71 @@ export default function FarmClient({
     const variant = variants.find(v => v.id === context.animalVariantId);
 
     const headers = [
-      "PEN_ID (ID KANDANG)", 
-      "PEN_NAME (NAMA KANDANG)", 
-      "VENDOR_ID (ID VENDOR)", 
-      "VENDOR_NAME (NAMA VENDOR)", 
-      "VARIANT_ID (ID VARIAN)", 
-      "VARIANT_NAME (NAMA VARIAN)", 
-      "FARM_ANIMAL_ID (ID HEWAN FARM)", 
-      "TAG_ID (ID TAG / EARTAG)", 
-      "ACQUISITION_TYPE (JENIS PENGADAAN)", 
-      "INITIAL_PRODUCT (PRODUK AWAL)", 
-      "PURCHASE_PRICE (HARGA BELI)", 
-      "INITIAL_WEIGHT (BOBOT AWAL)", 
-      "HORN_TYPE (JENIS TANDUK)", 
-      "NOTES (KETERANGAN)"
+      "TAG_ID", 
+      "GENERATED_ID",
+      "FARM_ANIMAL_ID",
+      "STATUS",
+      "ANIMAL_VARIANT_ID", 
+      "VARIANT_NAME", 
+      "BRANCH_ID",
+      "VENDOR_ID", 
+      "VENDOR_NAME", 
+      "PEN_ID", 
+      "PEN_NAME", 
+      "PAN_NAME",
+      "ACQUISITION_TYPE", 
+      "INITIAL_PRODUCT_TYPE", 
+      "ENTRY_DATE",
+      "EXIT_DATE",
+      "INITIAL_WEIGHT",
+      "INITIAL_WEIGHT_SOURCE",
+      "WEIGHT_ACTUAL",
+      "HORN_TYPE",
+      "PURCHASE_PRICE", 
+      "PRICE_PER_KG",
+      "SHIPPING_COST",
+      "TOTAL_HPP",
+      "INITIAL_TYPE",
+      "FINAL_TYPE",
+      "PHOTO_URL",
+      "ORDER_ITEM_ID"
     ];
 
     const rows = Array.from({ length: qty }).map(() => [
-      context.penId || "", 
-      pen?.name || "", 
-      context.vendorId || "", 
-      vendor?.name || "", 
+      "", // tag_id
+      "", // generated_id
+      "", // farm_animal_id
+      "AVAILABLE",
       context.animalVariantId || "", 
       variant ? `${variant.species} - ${variant.classGrade} (${variant.weightRange})` : "",
-      "", // farm_animal_id (Blue - Leave empty as per user request)
-      "", // tag_id (White)
-      "MANDIRI", // Default suggestion
-      "QURBAN ANTAR", // Default suggestion
-      "", // purchase_price
+      branchId,
+      context.vendorId || "", 
+      vendor?.name || "", 
+      context.penId || "", 
+      pen?.name || "", 
+      "", // pan_name
+      "MANDIRI", 
+      "QURBAN ANTAR", 
+      new Date().toISOString().split('T')[0],
+      "", // exit_date
       "", // initial_weight
-      "TANDUK", // Default suggestion
-      "" // notes
+      "", // weight_source
+      "", // weight_actual
+      "TANDUK", 
+      "", // purchase_price
+      "", // price_per_kg
+      "", // shipping_cost
+      "", // total_hpp
+      "", // initial_type
+      "", // final_type
+      "", // photo_url
+      "" // order_item_id
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template Upload");
-    XLSX.writeFile(wb, "Template_Upload_Farm_Guided.xlsx");
+    XLSX.writeFile(wb, "Template_Inventory_Full.xlsx");
     toast.success(`Template dengan ${qty} baris berhasil di-generate`);
   };
 
@@ -321,41 +378,61 @@ export default function FarmClient({
       
       let importedCount = 0;
       let errorCount = 0;
+      const rowErrors: string[] = [];
+      setIsImporting(true);
 
       startTransition(async () => {
-        for (const row of data) {
-          try {
-            const payload = {
-              branchId,
-              farmAnimalId: String(row["FARM_ANIMAL_ID (ID HEWAN FARM)"] || row["FARM_ANIMAL_ID"] || row["ID HEWAN FARM"] || ""),
-              eartagId: String(row["TAG_ID (ID TAG / EARTAG)"] || row["TAG_ID"] || row["ID HEWAN (Eartag)"] || ""),
-              acquisitionType: row["ACQUISITION_TYPE (JENIS PENGADAAN)"] || row["ACQUISITION_TYPE"] || row["JENIS PENGADAAN"],
-              initialProductType: row["INITIAL_PRODUCT (PRODUK AWAL)"] || row["INITIAL_PRODUCT"] || row["PRODUCT AWAL"],
-              penId: row["PEN_ID (ID KANDANG)"] || row["PEN_ID"] || row["KANDANG_ID"],
-              vendorId: row["VENDOR_ID (ID VENDOR)"] || row["VENDOR_ID"],
-              animalVariantId: row["VARIANT_ID (ID VARIAN)"] || row["VARIANT_ID"],
-              purchasePrice: row["PURCHASE_PRICE (HARGA BELI)"] || row["PURCHASE_PRICE"] || row["HARGA BELI"],
-              initialWeight: row["INITIAL_WEIGHT (BOBOT AWAL)"] || row["INITIAL_WEIGHT"] || row["BOBOT AWAL"],
-              hornType: row["HORN_TYPE (JENIS TANDUK)"] || row["HORN_TYPE"] || row["JENIS TANDUK"],
-              status: "AVAILABLE",
-            };
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          const payload = {
+            id: row.ID || row.id || undefined,
+            branchId: Number(row.BRANCH_ID || row.branch_id || branchId),
+            generatedId: String(row.GENERATED_ID || row.generated_id || ""),
+            farmAnimalId: String(row.FARM_ANIMAL_ID || row.farm_animal_id || ""),
+            eartagId: String(row.TAG_ID || row.EARTAG_ID || row.eartag_id || ""),
+            animalVariantId: Number(row.ANIMAL_VARIANT_ID || row.animal_variant_id || ""),
+            vendorId: row.VENDOR_ID || row.vendor_id ? Number(row.VENDOR_ID || row.vendor_id) : null,
+            entryDate: row.ENTRY_DATE || row.entry_date || null,
+            acquisitionType: row.ACQUISITION_TYPE || row.acquisition_type || null,
+            initialProductType: row.INITIAL_PRODUCT_TYPE || row.initial_product_type || null,
+            penId: row.PEN_ID || row.pen_id ? Number(row.PEN_ID || row.pen_id) : null,
+            panName: row.PAN_NAME || row.pan_name || null,
+            purchasePrice: row.PURCHASE_PRICE || row.purchase_price || null,
+            initialWeightSource: row.INITIAL_WEIGHT_SOURCE || row.initial_weight_source || null,
+            pricePerKg: row.PRICE_PER_KG || row.price_per_kg || null,
+            shippingCost: row.SHIPPING_COST || row.shipping_cost || null,
+            totalHpp: row.TOTAL_HPP || row.total_hpp || null,
+            hornType: row.HORN_TYPE || row.horn_type || null,
+            initialWeight: row.INITIAL_WEIGHT || row.initial_weight || null,
+            initialType: row.INITIAL_TYPE || row.initial_type || null,
+            finalType: row.FINAL_TYPE || row.final_type || null,
+            weightActual: row.WEIGHT_ACTUAL || row.weight_actual || null,
+            photoUrl: row.PHOTO_URL || row.photo_url || null,
+            status: row.STATUS || row.status || "AVAILABLE",
+            orderItemId: row.ORDER_ITEM_ID || row.order_item_id ? Number(row.ORDER_ITEM_ID || row.order_item_id) : null,
+            exitDate: row.EXIT_DATE || row.exit_date || null,
+          };
 
-            // Requirement: Must have eartag or farm_animal_id to be valid
-            if (payload.eartagId || payload.farmAnimalId) {
-              await saveInventoryAction(payload);
-              importedCount++;
-            }
-          } catch (err) {
-            console.error("Import row error:", err);
+          const res = await saveInventoryAction(payload);
+          if (res.success) {
+            importedCount++;
+          } else {
             errorCount++;
+            const msg = res.fieldErrors 
+              ? Object.values(res.fieldErrors).flat().join(", ")
+               : res.error;
+            rowErrors.push(`Brs ${i + 2}: ${msg}`);
           }
         }
         
         if (errorCount > 0) {
-          toast.warning(`Import selesai: ${importedCount} berhasil, ${errorCount} gagal.`);
+          toast.warning(`Import selesai: ${importedCount} berhasil, ${errorCount} gagal.`, {
+            description: rowErrors.slice(0, 3).join(" | ") + (rowErrors.length > 3 ? " ..." : "")
+          });
         } else {
           toast.success(`Berhasil mengimport ${importedCount} data hewan.`);
         }
+        setIsImporting(false);
       });
     };
     reader.readAsBinaryString(file);
@@ -381,42 +458,34 @@ export default function FarmClient({
   return (
     <div className="space-y-6 max-w-[100vw] overflow-x-hidden">
       {/* HEADER & TABS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-200">
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-3xl font-black text-[#102a43] tracking-tight flex items-center gap-3">
-              {activeTab === "inventory" ? <Box size={28} className="text-blue-600" /> : <MapPin size={28} className="text-indigo-600" />}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-black text-[#102a43] tracking-tight">
               {activeTab === "inventory" ? "Inventaris Farm" : "Daftar Kandang"}
             </h2>
-            <p className="text-slate-500 text-sm font-medium">
-              {activeTab === "inventory" 
-                ? "Kelola data hewan farm, monitoring bobot, dan tracking HPP." 
-                : "Kelola daftar kandang dan penempatan hewan di setiap cabang."}
-            </p>
+            <div className="flex p-0.5 bg-slate-200/50 rounded-xl">
+              <button
+                onClick={() => setActiveTab("inventory")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === "inventory" ? "bg-white text-[#102a43] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Inventaris
+              </button>
+              <button
+                onClick={() => setActiveTab("pens")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === "pens" ? "bg-white text-[#102a43] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Kandang
+              </button>
+            </div>
           </div>
-          
-          <div className="flex p-1 bg-slate-200/50 rounded-2xl w-fit">
-            <button
-              onClick={() => setActiveTab("inventory")}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === "inventory" 
-                  ? "bg-white text-[#102a43] shadow-md" 
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Inventaris
-            </button>
-            <button
-              onClick={() => setActiveTab("pens")}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === "pens" 
-                  ? "bg-white text-[#102a43] shadow-md" 
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Kandang
-            </button>
-          </div>
+          <p className="text-slate-500 text-xs font-medium">
+            {activeTab === "inventory" ? "Monitoring data hewan, bobot tumpuan, dan tracking HPP." : "Kelola daftar kandang setiap cabang."}
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -424,39 +493,39 @@ export default function FarmClient({
             <>
               <button 
                 onClick={() => setIsTemplateModalOpen(true)}
-                className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-3 rounded-2xl text-xs font-bold shadow-sm hover:bg-slate-50 hover:border-slate-400 transition-all"
+                className="flex items-center gap-1.5 bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-50 transition-all"
               >
-                <FileDown size={16} /> Template
+                <FileDown size={14} /> Template
               </button>
-              <label className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-3 rounded-2xl text-xs font-bold shadow-sm cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-all">
-                <FileUp size={16} /> Import
+              <label className="flex items-center gap-1.5 bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold shadow-sm cursor-pointer hover:bg-slate-50 transition-all">
+                <FileUp size={14} /> Import
                 <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
               </label>
               <button 
                 onClick={handleExport}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl text-xs font-bold shadow-sm hover:bg-emerald-700 hover:shadow-emerald-100 transition-all"
+                className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-700 transition-all"
               >
-                <FileDown size={16} /> Export
+                <FileDown size={14} /> Export
               </button>
               <button 
                 onClick={() => setIsBulkModalOpen(true)}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-2xl text-xs font-bold shadow-sm hover:bg-indigo-700 hover:shadow-indigo-100 transition-all"
+                className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all"
               >
-                <Layers size={16} /> Bulk Entry
+                <Layers size={14} /> Bulk
               </button>
               <button 
                 onClick={() => handleOpenModal()}
-                className="flex items-center gap-2 bg-[#102a43] text-white px-4 py-3 rounded-2xl text-xs font-bold shadow-sm hover:bg-slate-800 hover:shadow-slate-200 transition-all"
+                className="flex items-center gap-1.5 bg-[#102a43] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-800 transition-all"
               >
-                <Plus size={16} /> Tambah Satuan
+                <Plus size={14} /> Tambah
               </button>
             </>
           ) : (
             <button 
               onClick={() => handleOpenPenModal()}
-              className="flex items-center gap-2 bg-[#102a43] text-white px-4 py-3 rounded-2xl text-xs font-bold shadow-sm hover:bg-slate-800 transition-all"
+              className="flex items-center gap-1.5 bg-[#102a43] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-800 transition-all"
             >
-              <Plus size={16} /> Tambah Kandang
+              <Plus size={14} /> Tambah Kandang
             </button>
           )}
         </div>
@@ -470,52 +539,70 @@ export default function FarmClient({
             <div className="overflow-x-auto min-h-[400px] scrollbar-thin">
               <table className="w-full text-left border-collapse min-w-[1800px]">
                 <thead>
-                  <tr className="bg-slate-50/80 text-[10px] uppercase text-slate-500 border-b border-slate-200">
-                    <th className="p-5 font-bold w-16 text-center">No</th>
-                    <th className="p-5 font-bold">QR/Gen ID</th>
-                    <th className="p-5 font-bold">Hewan Farm ID</th>
-                    <th className="p-5 font-bold">Tag ID</th>
-                    <th className="p-5 font-bold">Varian</th>
-                    <th className="p-5 font-bold">Tgl Masuk</th>
-                    <th className="p-5 font-bold">Kandang</th>
-                    <th className="p-5 font-bold text-center">Status</th>
-                    <th className="p-5 font-bold text-right">Berat (kg)</th>
-                    <th className="p-5 font-bold text-right">HPP</th>
-                    <th className="p-5 font-bold text-right">Aksi</th>
+                  <tr className="bg-slate-50/80 text-[11px] uppercase text-slate-500 border-b border-slate-200">
+                    <th className="px-4 py-3 font-bold w-12 text-center">No</th>
+                    <th className="px-4 py-3 font-bold">Generated ID</th>
+                    <th className="px-4 py-3 font-bold">Farm Animal ID</th>
+                    <th className="px-4 py-3 font-bold">Tag ID (Eartag)</th>
+                    <th className="px-4 py-3 font-bold">Varian</th>
+                    <th className="px-4 py-3 font-bold">Vendor</th>
+                    <th className="px-4 py-3 font-bold whitespace-nowrap">Status</th>
+                    <th className="px-4 py-3 font-bold whitespace-nowrap">Tgl Masuk</th>
+                    <th className="px-4 py-3 font-bold whitespace-nowrap">Tgl Keluar</th>
+                    <th className="px-4 py-3 font-bold">Pengadaan</th>
+                    <th className="px-4 py-3 font-bold">Produk Awal</th>
+                    <th className="px-4 py-3 font-bold">Kandang</th>
+                    <th className="px-4 py-3 font-bold">No Pen (Pan)</th>
+                    <th className="px-4 py-3 font-bold text-right">Bobot Awal</th>
+                    <th className="px-4 py-3 font-bold text-right">Bobot Sumber</th>
+                    <th className="px-4 py-3 font-bold text-right">Berat Actual</th>
+                    <th className="px-4 py-3 font-bold">Tanduk</th>
+                    <th className="px-4 py-3 font-bold text-right">Harga Beli</th>
+                    <th className="px-4 py-3 font-bold text-right">Harga/kg</th>
+                    <th className="px-4 py-3 font-bold text-right">Ongkir</th>
+                    <th className="px-4 py-3 font-bold text-right">Total HPP</th>
+                    <th className="px-4 py-3 font-bold">Initial Type</th>
+                    <th className="px-4 py-3 font-bold">Final Type</th>
+                    <th className="px-4 py-3 font-bold">Photo URL</th>
+                    <th className="px-4 py-3 font-bold">Order Item ID</th>
+                    <th className="px-4 py-3 font-bold">Dibuat</th>
+                    <th className="px-4 py-3 font-bold text-right sticky right-0 bg-slate-50">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm divide-y divide-slate-100 italic-muted">
+                <tbody className="text-xs divide-y divide-slate-100 relative">
+                  {isImporting && (
+                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm flex items-center justify-center min-h-[400px]">
+                      <div className="flex flex-col items-center gap-3 bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+                        <Loader2 size={40} className="animate-spin text-blue-600" />
+                        <p className="font-black text-slate-700 animate-pulse">Memproses Data Import...</p>
+                      </div>
+                    </div>
+                  )}
                   {initialData.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="p-5 text-center text-slate-400 font-mono text-xs">
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-4 py-3 text-center text-slate-400 font-mono text-xs">
                         {(page - 1) * pageSize + index + 1}
                       </td>
-                      <td className="p-5">
-                        <div className="font-black text-[#102a43]">{item.generatedId}</div>
+                      <td className="px-4 py-3">
+                        <div className="font-black text-[#102a43] text-xs leading-tight">{item.generatedId}</div>
                       </td>
-                      <td className="p-5 font-semibold text-slate-700">{item.farmAnimalId || "—"}</td>
-                      <td className="p-5">
+                      <td className="px-4 py-3 font-semibold text-slate-700 text-xs">{item.farmAnimalId || "—"}</td>
+                      <td className="px-4 py-3">
                         <InlineEartagEdit 
                           id={item.id} 
                           value={item.eartagId} 
                           onSave={async (id, val) => {
-                            await patchEartagAction(id, val);
+                            return await patchEartagAction(id, val);
                           }}
                         />
                       </td>
-                      <td className="p-5">
-                        <div className="text-xs font-black text-[#102a43]">{item.species}</div>
-                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{item.classGrade} ({item.weightRange})</div>
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-black text-[#102a43] leading-tight">{item.species}</div>
+                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{item.classGrade} ({item.weightRange})</div>
                       </td>
-                      <td className="p-5 text-xs text-slate-600 font-medium">
-                        {item.entryDate ? new Date(item.entryDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                      </td>
-                      <td className="p-5">
-                        <div className="text-xs font-black text-indigo-700">{item.penName || "—"}</div>
-                        <div className="text-[10px] text-slate-500 font-medium">{item.panName || ""}</div>
-                      </td>
-                      <td className="p-5 text-center">
-                        <span className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase border tracking-widest ${
+                      <td className="px-4 py-3 text-xs font-medium text-slate-600">{item.vendorName || "—"}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border tracking-tight ${
                           item.status === 'AVAILABLE' ? 'bg-green-50 text-green-700 border-green-200' : 
                           item.status === 'ALLOCATED' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
                           'bg-slate-100 text-slate-700 border-slate-200'
@@ -523,19 +610,46 @@ export default function FarmClient({
                           {item.status}
                         </span>
                       </td>
-                      <td className="p-5 text-right font-black text-[#102a43]">
-                        {item.weightActual || item.initialWeight || "—"}
+                      <td className="px-4 py-3 text-xs text-slate-600 font-medium whitespace-nowrap">
+                        {item.entryDate ? new Date(item.entryDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '—'}
                       </td>
-                      <td className="p-5 text-right font-black text-slate-700">
+                      <td className="px-4 py-3 text-xs text-slate-600 font-medium whitespace-nowrap">
+                        {item.exitDate ? new Date(item.exitDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-semibold text-emerald-700 italic">{item.acquisitionType || "—"}</td>
+                      <td className="px-4 py-3 text-xs font-semibold text-indigo-700">{item.initialProductType || "—"}</td>
+                      <td className="px-4 py-3 text-xs font-black text-indigo-700 leading-tight">{item.penName || "—"}</td>
+                      <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-nowrap">{item.panName || "—"}</td>
+                      <td className="px-4 py-3 text-right font-black text-[#102a43] text-xs">{item.initialWeight || "—"}</td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-400 text-xs">{item.initialWeightSource || "—"}</td>
+                      <td className="px-4 py-3 text-right font-black text-blue-700 text-xs">{item.weightActual || "—"}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-600">{item.hornType || "—"}</td>
+                      <td className="px-4 py-3 text-right font-black text-slate-700 text-xs">
+                        {item.purchasePrice ? new Intl.NumberFormat('id-ID').format(Number(item.purchasePrice)) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-400 text-xs">
+                        {item.pricePerKg ? new Intl.NumberFormat('id-ID').format(Number(item.pricePerKg)) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-400 text-xs">
+                        {item.shippingCost ? new Intl.NumberFormat('id-ID').format(Number(item.shippingCost)) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-black text-[#102a43] text-xs">
                         {item.totalHpp ? new Intl.NumberFormat('id-ID').format(Number(item.totalHpp)) : "—"}
                       </td>
-                      <td className="p-5 text-right">
-                        <div className="flex justify-end gap-3 text-slate-300 group-hover:text-slate-400 transition-colors">
+                      <td className="px-4 py-3 text-xs text-slate-500 italic lowercase">{item.initialType || "—"}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 italic lowercase">{item.finalType || "—"}</td>
+                      <td className="px-4 py-3 text-[10px] text-blue-500 truncate max-w-[100px]">{item.photoUrl || "—"}</td>
+                      <td className="px-4 py-3 text-center text-slate-400 font-mono text-xs">{item.orderItemId || "—"}</td>
+                      <td className="px-4 py-3 text-[9px] text-slate-400 whitespace-nowrap">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right sticky right-0 bg-white group-hover:bg-slate-50 transition-colors border-l border-slate-100">
+                        <div className="flex justify-end gap-2 text-slate-300 group-hover:text-slate-400 transition-colors">
                           <button onClick={() => handleOpenModal(item)} className="hover:text-amber-600 transition-all hover:scale-110">
-                            <Pencil size={18} />
+                            <Pencil size={15} />
                           </button>
                           <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 transition-all hover:scale-110">
-                            <Trash2 size={18} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -624,18 +738,23 @@ export default function FarmClient({
         open={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         title={selectedItem ? "Ubah Data Inventaris" : "Tambah Data Inventaris Satuan"}
-        maxWidthClassName="max-w-5xl"
+        maxWidthClassName="max-w-6xl"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-1">
-          <div className="space-y-6">
-            <h4 className="font-black text-xs text-blue-500 uppercase tracking-widest border-b border-blue-100 pb-2">Identitas Dasar</h4>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-1">
+          {/* SEKSI 1: IDENTITAS */}
+          <div className="space-y-4">
+            <h4 className="font-black text-xs text-blue-500 uppercase tracking-widest border-b border-blue-100 pb-1.5">Identitas</h4>
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block">ID Hewan Farm</label>
-              <input type="text" className="w-full border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all" value={formData.farmAnimalId || ""} onChange={e => setFormData({...formData, farmAnimalId: e.target.value})} placeholder="Contoh: JT001" />
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">ID Tag (Eartag) <span className="text-red-500">*</span></label>
+              <input type="text" className="w-full border-slate-300 rounded-lg p-3 text-sm font-bold outline-none border focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all shadow-sm" value={formData.eartagId || ""} onChange={e => setFormData({...formData, eartagId: e.target.value})} placeholder="TAG-XXX" required />
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block tracking-wider">ID Hewan (Eartag) <span className="text-red-500">*</span></label>
-              <input type="text" className="w-full border-slate-300 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all" value={formData.eartagId || ""} onChange={e => setFormData({...formData, eartagId: e.target.value})} placeholder="Contoh: TAG-001" required />
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Farm Animal ID</label>
+              <input type="text" className="w-full border-slate-300 rounded-lg p-3 text-sm outline-none border focus:border-blue-400 transition-all shadow-sm" value={formData.farmAnimalId || ""} onChange={e => setFormData({...formData, farmAnimalId: e.target.value})} />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Generated ID</label>
+              <input type="text" className="w-full bg-slate-50 border-slate-200 rounded-lg p-3 text-sm font-mono text-slate-500" value={formData.generatedId || "(Otomatis)"} disabled />
             </div>
             <SearchableSelect 
               label="Varian Hewan"
@@ -646,20 +765,19 @@ export default function FarmClient({
             />
           </div>
 
-          <div className="space-y-6">
-            <h4 className="font-black text-xs text-indigo-500 uppercase tracking-widest border-b border-indigo-100 pb-2">Penempatan & Status</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <SearchableSelect 
-                label="Kandang"
-                placeholder="Pilih..."
-                options={pens.map(p => ({ label: p.name, value: p.id }))}
-                value={formData.penId}
-                onChange={val => setFormData({...formData, penId: val})}
-              />
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block">Pan / No Pen</label>
-                <input type="text" className="w-full border-slate-300 rounded-xl p-3 text-sm outline-none transition-all" value={formData.panName || ""} onChange={e => setFormData({...formData, panName: e.target.value})} />
-              </div>
+          {/* SEKSI 2: PENEMPATAN & STATUS */}
+          <div className="space-y-4">
+            <h4 className="font-black text-xs text-indigo-500 uppercase tracking-widest border-b border-indigo-100 pb-1.5">Penempatan</h4>
+            <SearchableSelect 
+              label="Kandang"
+              placeholder="Pilih Kandang..."
+              options={pens.map(p => ({ label: p.name, value: p.id }))}
+              value={formData.penId}
+              onChange={val => setFormData({...formData, penId: val})}
+            />
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">No Pen (Pan)</label>
+              <input type="text" className="w-full border-slate-300 rounded-lg p-3 text-sm outline-none border focus:border-indigo-400 shadow-sm" value={formData.panName || ""} onChange={e => setFormData({...formData, panName: e.target.value})} />
             </div>
             <SearchableSelect 
               label="Vendor / Sumber"
@@ -669,7 +787,7 @@ export default function FarmClient({
               onChange={val => setFormData({...formData, vendorId: val})}
             />
             <SearchableSelect 
-              label="Status Fisik"
+              label="Status"
               options={[
                 { label: "AVAILABLE (STOK)", value: "AVAILABLE" },
                 { label: "ALLOCATED (TERIKAT)", value: "ALLOCATED" },
@@ -681,32 +799,109 @@ export default function FarmClient({
             />
           </div>
 
-          <div className="space-y-6">
-            <h4 className="font-black text-xs text-emerald-500 uppercase tracking-widest border-b border-emerald-100 pb-2">Nilai & Bobot</h4>
-            <div className="grid grid-cols-2 gap-4">
+          {/* SEKSI 3: LOGISTIK & TANGGAL */}
+          <div className="space-y-4">
+            <h4 className="font-black text-xs text-emerald-500 uppercase tracking-widest border-b border-emerald-100 pb-1.5">Logistik</h4>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block">Bobot Sumber (kg)</label>
-                <input type="number" className="w-full border-slate-300 rounded-xl p-3 text-sm" value={formData.initialWeightSource || ""} onChange={e => setFormData({...formData, initialWeightSource: e.target.value})} />
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Tgl Masuk</label>
+                <input type="date" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-emerald-400 outline-none shadow-sm" value={formData.entryDate || ""} onChange={e => setFormData({...formData, entryDate: e.target.value})} />
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block text-emerald-600">Bobot Awal (kg)</label>
-                <input type="number" className="w-full border-emerald-200 bg-emerald-50/30 rounded-xl p-3 text-sm font-bold" value={formData.initialWeight || ""} onChange={e => setFormData({...formData, initialWeight: e.target.value})} />
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Tgl Keluar</label>
+                <input type="date" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-emerald-400 outline-none shadow-sm" value={formData.exitDate || ""} onChange={e => setFormData({...formData, exitDate: e.target.value})} />
+              </div>
+            </div>
+            <SearchableSelect 
+              label="Jenis Pengadaan"
+              options={[
+                { label: "MANDIRI", value: "MANDIRI" },
+                { label: "TITIPAN", value: "TITIPAN" },
+              ]}
+              value={formData.acquisitionType}
+              onChange={val => setFormData({...formData, acquisitionType: val})}
+            />
+            <SearchableSelect 
+              label="Produk Awal"
+              options={[
+                { label: "QURBAN ANTAR", value: "QURBAN ANTAR" },
+                { label: "QURBAN BERBAGI", value: "QURBAN BERBAGI" },
+                { label: "AQIQAH", value: "AQIQAH" },
+                { label: "LAINNYA", value: "LAINNYA" },
+              ]}
+              value={formData.initialProductType}
+              onChange={val => setFormData({...formData, initialProductType: val})}
+            />
+            <div>
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Tanduk</label>
+              <input type="text" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-emerald-400 outline-none shadow-sm" value={formData.hornType || ""} onChange={e => setFormData({...formData, hornType: e.target.value})} placeholder="Contoh: TANDUK" />
+            </div>
+          </div>
+
+          {/* SEKSI 4: NILAI & BOBOT */}
+          <div className="space-y-4">
+            <h4 className="font-black text-xs text-amber-500 uppercase tracking-widest border-b border-amber-100 pb-1.5">Nilai & Bobot</h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Bbt Awal</label>
+                <input type="number" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-amber-400 outline-none shadow-sm" value={formData.initialWeight || ""} onChange={e => setFormData({...formData, initialWeight: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Bbt Smbr</label>
+                <input type="number" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-amber-400 outline-none shadow-sm" value={formData.initialWeightSource || ""} onChange={e => setFormData({...formData, initialWeightSource: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Aktual</label>
+                <input type="number" className="w-full border-slate-300 rounded-lg p-3 text-sm border font-bold text-blue-600 focus:border-blue-500 outline-none shadow-sm" value={formData.weightActual || ""} onChange={e => setFormData({...formData, weightActual: e.target.value})} />
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase mb-1 block">Harga Beli / Ekor (Rp)</label>
-              <input type="number" className="w-full border-slate-300 bg-slate-50 font-black rounded-xl p-4 text-lg text-[#102a43]" value={formData.purchasePrice || ""} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} />
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Harga Beli (Rp)</label>
+              <input type="number" className="w-full border-slate-300 rounded-lg p-3 text-sm font-bold border focus:border-amber-400 outline-none shadow-sm" value={formData.purchasePrice || ""} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Harga/kg</label>
+                <input type="number" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-amber-400 outline-none shadow-sm" value={formData.pricePerKg || ""} onChange={e => setFormData({...formData, pricePerKg: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Ongkir</label>
+                <input type="number" className="w-full border-slate-300 rounded-lg p-3 text-sm border focus:border-amber-400 outline-none shadow-sm" value={formData.shippingCost || ""} onChange={e => setFormData({...formData, shippingCost: e.target.value})} />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-amber-600 uppercase mb-1.5 block tracking-wide">Total HPP</label>
+              <input type="number" className="w-full bg-amber-50/50 border-amber-200 rounded-lg p-3 text-base font-black text-amber-900 border" value={formData.totalHpp || ""} onChange={e => setFormData({...formData, totalHpp: e.target.value})} />
             </div>
           </div>
+
+          {/* SEKSI TAMBAHAN: MODAL ROW 2 */}
+          <div className="md:col-span-2 grid grid-cols-2 gap-6">
+             <div className="space-y-4">
+                <h4 className="font-black text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-1">Tipe (Initial/Final)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" className="w-full border-slate-300 rounded-lg p-2 text-xs border" value={formData.initialType || ""} onChange={e => setFormData({...formData, initialType: e.target.value})} placeholder="Initial Type" />
+                  <input type="text" className="w-full border-slate-300 rounded-lg p-2 text-xs border" value={formData.finalType || ""} onChange={e => setFormData({...formData, finalType: e.target.value})} placeholder="Final Type" />
+                </div>
+             </div>
+             <div className="space-y-4">
+                <h4 className="font-black text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-1">Media & Referensi</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" className="w-full border-slate-300 rounded-lg p-2 text-xs border" value={formData.photoUrl || ""} onChange={e => setFormData({...formData, photoUrl: e.target.value})} placeholder="Photo URL" />
+                  <input type="number" className="w-full border-slate-300 rounded-lg p-2 text-xs border" value={formData.orderItemId || ""} onChange={e => setFormData({...formData, orderItemId: e.target.value})} placeholder="Order Item ID" />
+                </div>
+             </div>
+          </div>
         </div>
-        <div className="mt-8 pt-6 border-t flex justify-end gap-3">
-          <button onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-all">Batal</button>
+
+        <div className="mt-6 pt-4 border-t flex justify-end gap-2">
+          <button onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-xl border border-slate-200 font-bold text-slate-500 text-xs hover:bg-slate-50 transition-all">Batal</button>
           <button 
             disabled={isPending}
             onClick={handleSave} 
-            className="bg-[#102a43] text-white px-12 py-3 rounded-2xl font-black shadow-lg shadow-slate-200 flex items-center gap-2 hover:bg-black hover:scale-[1.02] transition-all disabled:opacity-50"
+            className="bg-[#102a43] text-white px-10 py-2 rounded-xl font-black text-xs shadow-lg flex items-center gap-2 hover:bg-black transition-all disabled:opacity-50"
           >
-            {isPending ? <Loader2 className="animate-spin" size={20} /> : "Simpan Data"}
+            {isPending ? <Loader2 className="animate-spin" size={16} /> : "Simpan Data"}
           </button>
         </div>
       </Modal>

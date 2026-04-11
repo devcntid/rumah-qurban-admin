@@ -134,11 +134,9 @@ export async function listFarmInventories(params: {
     query = sql`${query} AND (fi.eartag_id ILIKE ${s} OR fi.farm_animal_id ILIKE ${s} OR fi.generated_id ILIKE ${s})`;
   }
 
-  const rows = await sql`
-    ${query}
-    ORDER BY fi.id DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  query = sql`${query} ORDER BY fi.id DESC LIMIT ${limit} OFFSET ${offset}`;
+
+  const rows = await query;
 
   return rows as unknown as FarmInventoryRow[];
 }

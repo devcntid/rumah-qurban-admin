@@ -7,12 +7,11 @@ Save this as `claude.md` or paste its contents into the "Project Instructions" b
 # System Prompt & Project Context: Rumah Qurban Admin Panel
 
 ## 🏢 Business Context
-You are building the **Admin Panel (Dashboard) for the Rumah Qurban System**. This system serves 9 school entities under two foundations (Kreativa Global & Talenta Juara). The Admin Panel is used by school staff, finance admins, and field staff to:
-1. Manage Master Data (Students, Branches, Vendors, Pricing).
+You are building the **Admin Panel (Dashboard) for the Rumah Qurban System**. :
+1. Manage Master Data ( Branches, Vendors, Pricing).
 2. Verify Qurban orders and manual bank transfers.
 3. Upload slaughter documentation (Photos/Videos) per animal eartag.
 4. Manage Qurban logistics and delivery statuses.
-5. Generate cross-school transaction reports.
 
 ## 🛠️ Strict Technical Directives
 
@@ -41,10 +40,9 @@ Field admins are responsible for uploading photos/videos of the Qurban animals.
 - Ensure the generated media URL is saved to the `slaughter_documentations` table using Raw SQL.
 
 ### 5. Multi-Tenant Data Isolation (Security)
-Data security is the top priority. Because 1 database hosts 9 schools:
-- Always assume the current admin session (`session.schoolId`) is available.
-- Never execute `SELECT * FROM orders` without filtering. Always ensure queries enforce tenant isolation:
-  `SELECT * FROM orders WHERE school_id = ${session.schoolId}`.
+Data security is the top priority. 
+
+- Never execute `SELECT * FROM orders` without filtering.  
 
 ## 🔄 Expected Workflow for New Features
 If the user asks you to build a new page or feature in the Admin Panel, follow this mental framework:
