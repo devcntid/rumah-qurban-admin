@@ -40,7 +40,7 @@ function InlineEartagEdit({
 }: { 
   id: number; 
   value: string; 
-  onSave: (id: number, newValue: string) => Promise<void> 
+  onSave: (id: number, newValue: string) => Promise<{ success: boolean; error?: string }> 
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
