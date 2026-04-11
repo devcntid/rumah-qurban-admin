@@ -161,10 +161,23 @@ export async function createOrderAction(data: z.infer<typeof CreateOrderSchema>)
     }
   } catch (error) {
     console.error("Create Order Error:", error);
-    throw new Error("Gagal membuat pesanan di database");
+    return { success: false, message: "Gagal membuat pesanan di database" };
   }
   
   revalidatePath("/orders");
   revalidatePath("/pos");
-  redirect("/orders");
+  return { success: true, orderId: orderId, invoiceNumber: invoiceNumber };
 }
+
+export async function deleteOrderAction(id: number) {
+  const { deleteOrder } = await import("@/lib/db/queries/orders");
+  try {
+    await deleteOrder(id);
+    revalidatePath("/orders");
+    return { success: true };
+  } catch (error) {
+    console.error("Delete Order Error:", error);
+    return { success: false, error: "Gagal menghapus pesanan" };
+  }
+}
+

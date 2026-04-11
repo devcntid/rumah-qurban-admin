@@ -60,6 +60,33 @@ export async function listSalesTargets(params: {
   return rows as unknown as SalesTargetRow[];
 }
 
+export async function countSalesTargets(params: {
+  branchId?: number;
+  year?: number;
+  species?: string;
+  category?: string;
+}) {
+  const sql = getDb();
+  const where: string[] = [];
+  const values: unknown[] = [];
+
+  const push = (cond: string, val?: unknown) => {
+    where.push(cond);
+    if (typeof val !== "undefined") values.push(val);
+  };
+
+  if (params.branchId) push(`branch_id = $${values.length + 1}`, params.branchId);
+  if (params.year) push(`year = $${values.length + 1}`, params.year);
+  if (params.species) push(`species = $${values.length + 1}`, params.species);
+  if (params.category) push(`category = $${values.length + 1}`, params.category);
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+  const q = `SELECT count(*) FROM sales_targets ${whereSql}`;
+  const rows = await sql.query(q, values);
+  return parseInt((rows as any)[0].count);
+}
+
 export async function upsertSalesTarget(input: {
   branchId: number;
   year: number;

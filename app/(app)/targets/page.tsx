@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth/session";
 import { asNumber, asString } from "@/lib/db/filters";
 import { getPageParams } from "@/lib/db/pagination";
-import { listSalesTargets, listTargetVsActual } from "@/lib/db/queries/targets";
+import { listSalesTargets, listTargetVsActual, countSalesTargets } from "@/lib/db/queries/targets";
 import { FiltersBar } from "@/components/ui/FiltersBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { TargetsCrud } from "@/app/(app)/targets/TargetsCrud";
@@ -31,26 +31,22 @@ export default async function TargetsPage({
 
   const targetYear = year ? Math.trunc(year) : new Date().getFullYear();
 
-  const rows = await listSalesTargets({
+  const filters = {
     branchId: session?.branchId,
     year: year ? Math.trunc(year) : undefined,
     species: species || undefined,
     category: category || undefined,
-    limit: limit + 1,
-    offset,
-  });
+  };
 
-  const achievement =
-    session?.branchId != null
-      ? await listTargetVsActual(session.branchId, targetYear)
-      : [];
+  const [rows, totalCount, achievement] = await Promise.all([
+    listSalesTargets({ ...filters, limit, offset }),
+    countSalesTargets(filters),
+    session?.branchId != null ? listTargetVsActual(session.branchId, targetYear) : [],
+  ]);
 
-  const hasNext = rows.length > limit;
-  const data = hasNext ? rows.slice(0, limit) : rows;
-
-  const totalEkor = data.reduce((s, r) => s + (r.targetEkor ?? 0), 0);
-  const totalOmset = data.reduce((s, r) => s + Number(r.targetOmset || 0), 0);
-  const totalHpp = data.reduce((s, r) => s + Number(r.targetHpp || 0), 0);
+  const totalEkor = rows.reduce((s, r) => s + (r.targetEkor ?? 0), 0);
+  const totalOmset = rows.reduce((s, r) => s + Number(r.targetOmset || 0), 0);
+  const totalHpp = rows.reduce((s, r) => s + Number(r.targetHpp || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -150,9 +146,9 @@ export default async function TargetsPage({
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <TargetsCrud rows={data} />
-        <div className="px-4 pb-4 -mt-2">
-          <Pagination page={page} pageSize={pageSize} hasNext={hasNext} />
+        <TargetsCrud rows={rows} />
+        <div className="px-4 pb-4">
+          <Pagination page={page} pageSize={pageSize} totalItems={totalCount} />
         </div>
       </div>
     </div>

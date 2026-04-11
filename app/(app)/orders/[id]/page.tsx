@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getOrderWithItems } from "@/lib/db/queries/orders";
+import { getAllocatedAnimalsForOrderItem } from "@/lib/db/queries/farm";
 import { 
   ArrowLeft, User, Phone, MapPin, Wallet, Receipt, 
   ShoppingCart, ListChecks, Calendar, CheckCircle2, Clock, MapIcon
 } from "lucide-react";
 import Link from "next/link";
 import { OrderTransactionsSection } from "./OrderTransactionsSection";
+import { AllocationSection } from "@/components/orders/AllocationSection";
 
 function formatIDR(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -48,6 +50,14 @@ export default async function OrderDetailPage({
     participantsByItem.set(Number(p.orderItemId), list);
   }
 
+  // Fetch allocations for each item
+  const itemsWithAllocations = await Promise.all(
+    items.map(async (it) => {
+      const allocations = await getAllocatedAnimalsForOrderItem(it.id);
+      return { ...it, allocations };
+    })
+  );
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
@@ -69,14 +79,19 @@ export default async function OrderDetailPage({
             <Calendar size={12}/> Dibuat pada {new Date(order.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <button className="hidden md:flex items-center gap-2 bg-[#102a43] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-lg hover:bg-slate-800 transition-all hover:-translate-y-0.5 active:scale-95 shadow-blue-900/10">
+        <a 
+          href={`/api/orders/${order.id}/invoice`}
+          target="_blank"
+          className="hidden md:flex items-center gap-2 bg-[#102a43] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-lg hover:bg-slate-800 transition-all hover:-translate-y-0.5 active:scale-95 shadow-blue-900/10"
+        >
           <Receipt size={16} /> Cetak Invoice
-        </button>
+        </a>
       </div>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Customer Card */}
+        {/* ... (Customer Card, Financial Summary, Payment History) ... */}
+        {/* I'll keep the middle unchanged for brevity if possible, but replace_file_content needs the whole block */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden transition-all hover:shadow-md group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-bl-full -mr-12 -mt-12 transition-all group-hover:scale-110"></div>
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -110,7 +125,6 @@ export default async function OrderDetailPage({
           </div>
         </div>
 
-        {/* Financial Summary */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Wallet size={14} className="text-green-500"/> Ringkasan Finansial
@@ -135,7 +149,6 @@ export default async function OrderDetailPage({
           </div>
         </div>
 
-        {/* Payment History */}
         <div className="md:col-span-1">
           <OrderTransactionsSection 
             orderId={order.id} 
@@ -161,7 +174,7 @@ export default async function OrderDetailPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {items.map((it) => (
+              {itemsWithAllocations.map((it) => (
                 <tr key={it.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider">
@@ -171,6 +184,16 @@ export default async function OrderDetailPage({
                   <td className="px-6 py-5">
                     <div className="font-black text-slate-800 text-base">{it.itemName}</div>
                     
+                    {/* Allocation Section for Animal Products */}
+                    {it.catalogOfferId && (
+                      <AllocationSection 
+                        orderItemId={it.id} 
+                        itemName={it.itemName} 
+                        targetQuantity={it.quantity}
+                        initialAllocations={it.allocations}
+                      />
+                    )}
+
                     {/* Participants List */}
                     {participantsByItem.has(Number(it.id)) && (
                       <div className="mt-4 space-y-2 border-l-4 border-blue-500/20 pl-4 py-1">
@@ -201,3 +224,4 @@ export default async function OrderDetailPage({
     </div>
   );
 }
+

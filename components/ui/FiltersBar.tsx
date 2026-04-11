@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 export type FilterField =
   | { key: string; label: string; type: "text"; placeholder?: string }
   | { key: string; label: string; type: "number"; placeholder?: string }
+  | { key: string; label: string; type: "date" }
   | { key: string; label: string; type: "select"; options: { label: string; value: string }[] };
 
 export function FiltersBar({
@@ -33,18 +34,27 @@ export function FiltersBar({
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const next = new URLSearchParams(sp);
-      next.set("page", "1");
+      const next = new URLSearchParams(sp.toString());
+      
+      let hasChanged = false;
       for (const f of fields) {
-        const v = (values[f.key] ?? "").trim();
-        if (!v) next.delete(f.key);
-        else next.set(f.key, v);
+        const currentVal = sp.get(f.key) ?? "";
+        const newVal = (values[f.key] ?? "").trim();
+        
+        if (currentVal !== newVal) {
+          hasChanged = true;
+          if (!newVal) next.delete(f.key);
+          else next.set(f.key, newVal);
+        }
       }
-      router.replace(`${pathname}?${next.toString()}`);
+
+      if (hasChanged) {
+        next.set("page", "1");
+        router.replace(`${pathname}?${next.toString()}`);
+      }
     }, debounceMs);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(values), debounceMs, fields, pathname]);
+  }, [JSON.stringify(values), debounceMs, fields, pathname, router, sp]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">

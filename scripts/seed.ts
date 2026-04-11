@@ -10,20 +10,30 @@ async function main() {
 
   await sql`BEGIN`;
   try {
-    const branchSeed: [string, string][] = [
-      ["Bandung Raya", "400-10-101"],
-      ["Bogor", "400-10-102"],
-      ["Cilegon", "400-10-103"],
-      ["Jakarta Raya", "400-10-104"],
-      ["Semarang", "400-10-105"],
-      ["Solo", "400-10-106"],
+    const branchSeed: [string, string, string][] = [
+      ["Bandung Raya", "400-10-101", "Jl. Bojongsoang No. 123, Kabupaten Bandung, Jawa Barat"],
+      ["Bogor", "400-10-102", "Jl. Raya Pajajaran No. 45, Kota Bogor, Jawa Barat"],
+      ["Cilegon", "400-10-103", "Jl. Sultan Ageng Tirtayasa No. 8, Cilegon, Banten"],
+      ["Cirebon", "400-10-104", "Jl. Kartini No. 12, Kota Cirebon, Jawa Barat"],
+      ["Jakarta Raya", "400-10-105", "Jl. Tebet Raya No. 56, Jakarta Selatan, DKI Jakarta"],
+      ["Padang", "400-10-106", "Jl. Khatib Sulaiman No. 22, Padang, Sumatera Barat"],
+      ["Palembang", "400-10-107", "Jl. Jend. Sudirman No. 88, Palembang, Sumatera Selatan"],
+      ["Semarang", "400-10-108", "Jl. Pandanaran No. 10, Semarang, Jawa Tengah"],
+      ["Solo", "400-10-109", "Jl. Slamet Riyadi No. 200, Surakarta, Jawa Tengah"],
+      ["Surabaya", "400-10-110", "Jl. Ahmad Yani No. 15, Surabaya, Jawa Timur"],
+      ["Tangerang Raya", "400-10-111", "Jl. BSD Raya Utama No. 1, Tangerang South, Banten"],
+      ["Yogyakarta", "400-10-112", "Jl. Malioboro No. 5, Yogyakarta, DIY"],
+      ["Kupang", "400-10-113", "Jl. El Tari No. 1, Kota Kupang, NTT"],
+      ["Bojonegoro", "400-10-114", "Jl. Mastrip No. 18, Bojonegoro, Jawa Timur"],
+      ["Brebes", "400-10-115", "Jl. Jenderal Sudirman No. 3, Brebes, Jawa Tengah"],
     ];
-    for (const [name, coa] of branchSeed) {
+    for (const [name, coa, address] of branchSeed) {
       await sql`
-        INSERT INTO branches (name, coa_code, is_active)
-        VALUES (${name}, ${coa}, TRUE)
+        INSERT INTO branches (name, coa_code, address, is_active)
+        VALUES (${name}, ${coa}, ${address}, TRUE)
         ON CONFLICT (name) DO UPDATE
         SET coa_code = EXCLUDED.coa_code,
+            address = EXCLUDED.address,
             is_active = EXCLUDED.is_active
       `;
     }
@@ -77,12 +87,24 @@ async function main() {
 
     await sql`
       INSERT INTO animal_variants (id, species, class_grade, weight_range, description) VALUES
-        (1, 'Sapi', 'A', '250 - 300 Kg', NULL),
-        (2, 'Sapi', 'B', '310 - 350 Kg', NULL),
-        (3, 'Domba', 'A', '27 - 30 Kg', NULL),
-        (4, 'Domba', 'B', '23 - 26 Kg', NULL),
-        (5, 'Sapi', '-', '-', 'Generic kaleng/berbagi'),
-        (6, 'Domba', '-', '-', 'Generic kaleng/berbagi')
+        (1, 'Sapi', 'A', '250 - 300 Kg', 'Sapi Jawa/Lokal'),
+        (2, 'Sapi', 'B', '310 - 350 Kg', 'Sapi Jawa/Lokal'),
+        (3, 'Sapi', 'C', '360 - 400 Kg', 'Sapi Jawa/Lokal'),
+        (4, 'Sapi', 'D', '410 - 450 Kg', 'Sapi Jawa/Lokal'),
+        (5, 'Domba', 'A', '27 - 30 Kg', 'Domba Jantan Tanduk'),
+        (6, 'Domba', 'B', '31 - 35 Kg', 'Domba Jantan Tanduk'),
+        (7, 'Domba', 'C', '36 - 40 Kg', 'Domba Jantan Tanduk'),
+        (8, 'Domba', 'D', '41 - 45 Kg', 'Domba Jantan Tanduk'),
+        (9, 'Domba', 'E', '46 - 50 Kg', 'Domba Jantan Tanduk'),
+        (10, 'Domba', 'F', '> 50 Kg', 'Domba Jantan Tanduk'),
+        (11, 'Kambing', 'A', '14 - 16 Kg', 'Kambing Jantan'),
+        (12, 'Kambing', 'B', '17 - 22 Kg', 'Kambing Jantan'),
+        (13, 'Kambing', 'C', '23 - 27 Kg', 'Kambing Jantan'),
+        (14, 'Kambing', 'D', '28 - 32 Kg', 'Kambing Jantan'),
+        (17, 'Kambing', 'E', '33 - 37 Kg', 'Kambing Jantan'),
+        (18, 'Kambing', 'F', '> 40 Kg', 'Kambing Jantan'),
+        (15, 'Sapi', '-', '-', 'Generic / Kaleng / Berbagi'),
+        (16, 'Domba', '-', '-', 'Generic / Kaleng / Berbagi')
       ON CONFLICT (id) DO UPDATE
       SET species = EXCLUDED.species,
           class_grade = EXCLUDED.class_grade,
@@ -105,24 +127,152 @@ async function main() {
     await sql`
       INSERT INTO catalog_offers (
         id, product_id, animal_variant_id, branch_id, vendor_id,
-        display_name, sub_type, sku_code, projected_weight, price, image_url, is_active
+        display_name, sub_type, sku_code, weight_range, projected_weight, price, image_url, is_active
       ) VALUES
-        (1, 1, 1, ${bandungId}, ${farmAgroId}, 'Qurban Antar Sapi Jawa', NULL, '0231', '308 Kg', 22000000,
-         'https://example.com/sapi-a.png', TRUE),
-        (2, 1, 2, ${bandungId}, ${farmAgroId}, 'Qurban Antar Sapi Jawa', NULL, '0207', '340 Kg', 26000000,
-         'https://example.com/sapi-b.png', TRUE),
-        (3, 1, 3, ${bandungId}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', NULL, NULL, '28 Kg', 3100000,
-         'https://example.com/domba-a.jpg', TRUE),
-        (4, 2, 6, ${bandungId}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, 2500000,
-         'https://example.com/rendang-domba.jpg', TRUE),
-        (5, 2, 5, ${bandungId}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, 18000000,
-         'https://example.com/rendang-sapi.jpg', TRUE),
-        (6, 3, 5, NULL, NULL, 'Qurban Berbagi Sapi di Desa Oebufu Kupang', NULL, NULL, NULL, 17000000,
-         'https://example.com/kupang.jpg', TRUE),
-        (7, 3, 6, NULL, NULL, 'Qurban Berbagi Domba Kambing Di Desa Dukuh Turi', NULL, NULL, NULL, 2500000,
-         'https://example.com/brebes.jpg', TRUE),
-        (8, 1, 4, ${bandungId}, ${farmAgroId}, 'Qurban Antar Domba Tipe B (Bandung)', NULL, NULL, '23 - 26 Kg', 2100000,
-         NULL, TRUE)
+        -- ITEM 1-17: BANDUNG RAYA
+        (1, 1, 1, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Sapi Jawa', 'jawa', '0231', '250 - 300 Kg', '308 Kg', 22000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%20A.png', TRUE),
+        (2, 1, 2, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Sapi Jawa', 'jawa', '0207', '310 - 350 Kg', '340 Kg', 26000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%202.png', TRUE),
+        (3, 1, 3, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Sapi Jawa', 'jawa', '0218', '360 - 400 Kg', '382 Kg', 30000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%203.png', TRUE),
+        (4, 1, 4, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Sapi Jawa', 'jawa', '0206', '410 - 450 Kg', '423 Kg', 34000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%204.png', TRUE),
+        (5, 1, 5, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', 'tanduk', NULL, '27 - 30 Kg', '28 Kg', 3100000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (6, 1, 6, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', 'tanduk', NULL, '31 - 35 Kg', NULL, 3600000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (7, 1, 7, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', 'tanduk', NULL, '36 - 40 Kg', NULL, 4100000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (8, 1, 8, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', 'tanduk', NULL, '41 - 45 Kg', NULL, 4800000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (9, 1, 9, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', 'tanduk', NULL, '46 - 50 Kg', NULL, 5300000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20E.jpg', TRUE),
+        (10, 1, 10, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Tanduk', 'tanduk', NULL, '>50 Kg', NULL, 6000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20F.jpg', TRUE),
+        (11, 1, 1, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Antar Sapi Bali', 'bali', NULL, '260 - 300 Kg', NULL, 20000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%20kupang%201.jpg', TRUE),
+        (12, 1, 2, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Antar Sapi Bali', 'bali', NULL, ' 310 - 350 Kg', NULL, 23250000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%20kupang%202.jpg', TRUE),
+        (13, 1, 3, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Antar Sapi Bali', 'bali', NULL, '360 - 400 Kg', NULL, 26750000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%20kupang%203.jpg', TRUE),
+        (14, 1, 4, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Antar Sapi Bali', 'bali', NULL, '410 - 450 Kg', NULL, 30500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/sapi%20kupang%204.jpg', TRUE),
+        (15, 1, 5, ${branchIdByName("Bandung Raya")}, ${farmAgroId}, 'Qurban Antar Domba Jantan Dugul', 'dugul', NULL, '27 - 30 Kg', NULL, 2700000, NULL, TRUE),
+        (16, 1, 6, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Antar Domba Jantan Dugul', 'dugul', NULL, '31 - 35 Kg', NULL, 3150000, NULL, TRUE),
+        (17, 1, 7, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Antar Domba Jantan Dugul', 'dugul', NULL, '36 - 40 Kg', NULL, 3750000, NULL, TRUE),
+
+        -- ITEM 18-21: BANDUNG RAYA KALENG
+        (18, 2, 16, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (19, 2, 16, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (20, 2, 15, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (21, 2, 15, ${branchIdByName("Bandung Raya")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 22-29: BOGOR
+        (22, 1, 5, ${branchIdByName("Bogor")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '20 - 24 Kg', NULL, 2700000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (23, 1, 6, ${branchIdByName("Bogor")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '25 - 29 Kg', NULL, 3100000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (24, 1, 7, ${branchIdByName("Bogor")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '30 - 34 Kg', NULL, 3500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (25, 1, 8, ${branchIdByName("Bogor")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '35 -39 Kg', NULL, 4000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (26, 2, 16, ${branchIdByName("Bogor")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (27, 2, 16, ${branchIdByName("Bogor")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (28, 2, 15, ${branchIdByName("Bogor")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (29, 2, 15, ${branchIdByName("Bogor")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 30-45: CILEGON
+        (30, 1, 5, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '14 - 16 Kg', NULL, 2300000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (31, 1, 6, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '17 - 22 Kg', NULL, 2750000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (32, 1, 7, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '23 - 27 Kg', NULL, 3400000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (33, 1, 8, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '28 - 32 Kg', NULL, 4100000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (34, 1, 9, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '33 - 37 Kg', NULL, 4700000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20E.jpg', TRUE),
+        (35, 1, 10, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '> 40 Kg', NULL, 5200000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20F.jpg', TRUE),
+        (36, 1, 11, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '14 - 16 Kg', NULL, 2400000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20A.jpg', TRUE),
+        (37, 1, 12, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '17 - 22 Kg', NULL, 2900000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20B.jpg', TRUE),
+        (38, 1, 13, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '23 - 27 Kg', NULL, 3550000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20C.jpg', TRUE),
+        (39, 1, 14, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '28 - 32 Kg', NULL, 4250000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20D.jpg', TRUE),
+        (40, 1, 17, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '33 - 37 Kg', NULL, 4850000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20E.jpg', TRUE),
+        (41, 1, 18, ${branchIdByName("Cilegon")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '> 40 Kg', NULL, 5350000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20F.jpg', TRUE),
+        (42, 2, 16, ${branchIdByName("Cilegon")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (43, 2, 16, ${branchIdByName("Cilegon")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (44, 2, 15, ${branchIdByName("Cilegon")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (45, 2, 15, ${branchIdByName("Cilegon")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 46-53: CIREBON
+        (46, 1, 5, ${branchIdByName("Cirebon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '23 - 26 Kg', NULL, 2550000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (47, 1, 6, ${branchIdByName("Cirebon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '27 - 30 Kg', NULL, 3300000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (48, 1, 7, ${branchIdByName("Cirebon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '31 - 35 Kg', NULL, 3550000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (49, 1, 8, ${branchIdByName("Cirebon")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '36 - 40 Kg', NULL, 4200000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (50, 2, 16, ${branchIdByName("Cirebon")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (51, 2, 16, ${branchIdByName("Cirebon")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (52, 2, 15, ${branchIdByName("Cirebon")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (53, 2, 15, ${branchIdByName("Cirebon")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 54-60: JAKARTA RAYA
+        (54, 1, 5, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '18 - 19 Kg', NULL, 3000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (55, 1, 6, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '20 - 23 Kg', NULL, 3300000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (56, 1, 7, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '24- 27 Kg', NULL, 3900000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (57, 1, 8, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '28 - 30 Kg', NULL, 4300000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (58, 1, 9, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '31 - 34 Kg', NULL, 4900000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20E.jpg', TRUE),
+        (59, 1, 10, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '35 - 38 Kg', NULL, 5400000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20F.jpg', TRUE),
+        (60, 2, 15, ${branchIdByName("Jakarta Raya")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, NULL, TRUE),
+
+        -- ITEM 61-68: PADANG
+        (61, 1, 11, ${branchIdByName("Padang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '23 - 26 Kg', NULL, 2250000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (62, 1, 12, ${branchIdByName("Padang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '27 - 30 Kg', NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (63, 1, 13, ${branchIdByName("Padang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '31 - 35 Kg', NULL, 2850000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (64, 1, 14, ${branchIdByName("Padang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '36 - 40 Kg', NULL, 3200000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (65, 2, 16, ${branchIdByName("Padang")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (66, 2, 16, ${branchIdByName("Padang")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (67, 2, 15, ${branchIdByName("Padang")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (68, 2, 15, ${branchIdByName("Padang")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 69-76: PALEMBANG
+        (69, 1, 11, ${branchIdByName("Palembang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '19 - 22 Kg', NULL, 2800000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (70, 1, 12, ${branchIdByName("Palembang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '23 - 26 Kg', NULL, 3200000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (71, 1, 13, ${branchIdByName("Palembang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '27 - 30 Kg', NULL, 3700000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (72, 1, 14, ${branchIdByName("Palembang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '31 - 35 Kg', NULL, 4200000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (73, 2, 16, ${branchIdByName("Palembang")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (74, 2, 16, ${branchIdByName("Palembang")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (75, 2, 15, ${branchIdByName("Palembang")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (76, 2, 15, ${branchIdByName("Palembang")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 77-88: SEMARANG
+        (77, 1, 11, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', '5055', '20-22 Kg', NULL, 2650000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/5055.jpg', TRUE),
+        (78, 1, 12, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '23 - 25 Kg', NULL, 2900000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20B.jpg', TRUE),
+        (79, 1, 13, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '26 - 28 Kg', NULL, 3300000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20C.jpg', TRUE),
+        (80, 1, 14, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '29-31 Kg', NULL, 3700000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20D.jpg', TRUE),
+        (81, 1, 5, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '20 - 22 Kg', NULL, 2600000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (82, 1, 6, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Domba', 'domba', '6058', '23 - 25 Kg', NULL, 2850000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/6%20a.jpg', TRUE),
+        (83, 1, 7, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Domba', 'domba', '6056', '26 - 28 Kg', NULL, 3250000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/6B.jpg', TRUE),
+        (84, 1, 8, ${branchIdByName("Semarang")}, NULL, 'Qurban Antar Domba', 'domba', '6052', '29 - 31 Kg', NULL, 3600000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/6C.jpg', TRUE),
+        (85, 2, 16, ${branchIdByName("Semarang")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (86, 2, 16, ${branchIdByName("Semarang")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (87, 2, 15, ${branchIdByName("Semarang")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (88, 2, 15, ${branchIdByName("Semarang")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 89-102: SOLO
+        (89, 1, 5, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '20 - 22 Kg', NULL, 2100000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20A.jpg', TRUE),
+        (90, 1, 6, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '23 - 26 Kg', NULL, 2450000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20B.jpg', TRUE),
+        (91, 1, 7, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '27 - 30 Kg', NULL, 2700000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20C.jpg', TRUE),
+        (92, 1, 8, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '31 - 35 Kg', NULL, 2800000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20D.jpg', TRUE),
+        (93, 1, 9, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Domba', 'domba', NULL, '36 - 40 Kg', NULL, 3400000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/domba/domba%20E.jpg', TRUE),
+        (94, 1, 11, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '20 - 22 Kg', NULL, 2350000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20A.jpg', TRUE),
+        (95, 1, 12, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '23 - 26 Kg', NULL, 2650000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20B.jpg', TRUE),
+        (96, 1, 13, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '27 - 30 Kg', NULL, 2850000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20C.jpg', TRUE),
+        (97, 1, 14, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '31 - 35 Kg', NULL, 3200000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20D.jpg', TRUE),
+        (98, 1, 9, ${branchIdByName("Solo")}, NULL, 'Qurban Antar Kambing Jantan', 'kambing', NULL, '36 - 40 Kg', NULL, 4050000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kambing/kambing%20E.jpg', TRUE),
+        (99, 2, 16, ${branchIdByName("Solo")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (100, 2, 16, ${branchIdByName("Solo")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (101, 2, 15, ${branchIdByName("Solo")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (102, 2, 15, ${branchIdByName("Solo")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 103-106: SURABAYA
+        (103, 2, 16, ${branchIdByName("Surabaya")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (104, 2, 16, ${branchIdByName("Surabaya")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (105, 2, 15, ${branchIdByName("Surabaya")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (106, 2, 15, ${branchIdByName("Surabaya")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 107-110: TANGERANG RAYA
+        (107, 2, 16, ${branchIdByName("Tangerang Raya")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (108, 2, 16, ${branchIdByName("Tangerang Raya")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (109, 2, 15, ${branchIdByName("Tangerang Raya")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (110, 2, 15, ${branchIdByName("Tangerang Raya")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 111-114: YOGYAKARTA
+        (111, 2, 16, ${branchIdByName("Yogyakarta")}, NULL, 'Qurban Kaleng Rendang Domba', 'rendang', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20domba.jpg', TRUE),
+        (112, 2, 16, ${branchIdByName("Yogyakarta")}, NULL, 'Qurban Kaleng Kornet Domba', 'kornet', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20domba.jpg', TRUE),
+        (113, 2, 15, ${branchIdByName("Yogyakarta")}, NULL, 'Qurban Kaleng Rendang Sapi', 'rendang', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/rendang%20sapi.jpg', TRUE),
+        (114, 2, 15, ${branchIdByName("Yogyakarta")}, NULL, 'Qurban Kaleng Kornet Sapi', 'kornet', NULL, NULL, NULL, 18000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kaleng/kornet%20sapi.jpg', TRUE),
+
+        -- ITEM 115-117: QURBAN BERBAGI
+        (115, 3, 15, ${branchIdByName("Kupang")}, NULL, 'Qurban Berbagi Sapi di Desa Oebufu Kupang', 'kupang', NULL, NULL, NULL, 17000000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/kupang.jpg', TRUE),
+        (116, 3, 16, ${branchIdByName("Bojonegoro")}, NULL, 'Qurban Berbagi Kambing Domba di Desa Sidomukti Bojonegoro', 'bojonegoro', NULL, NULL, NULL, 1800000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/bojonegoro.jpg', TRUE),
+        (117, 3, 16, ${branchIdByName("Brebes")}, NULL, 'Qurban Berbagi Domba Kambing Di Desa Dukuh Turi Kabupaten Brebes', 'brebes', NULL, NULL, NULL, 2500000, 'https://68psuaeywongw0sq.public.blob.vercel-storage.com/hewaan/brebes.jpg', TRUE)
       ON CONFLICT (id) DO UPDATE
       SET product_id = EXCLUDED.product_id,
           animal_variant_id = EXCLUDED.animal_variant_id,
@@ -131,6 +281,7 @@ async function main() {
           display_name = EXCLUDED.display_name,
           sub_type = EXCLUDED.sub_type,
           sku_code = EXCLUDED.sku_code,
+          weight_range = EXCLUDED.weight_range,
           projected_weight = EXCLUDED.projected_weight,
           price = EXCLUDED.price,
           image_url = EXCLUDED.image_url,
@@ -285,32 +436,10 @@ async function main() {
          5000000, 60, 80000, 40000, 5040000, 
          'POLL', 60, 'TIPE F', 'TIPE F', 25.00, 
          NULL, 'ALLOCATED', 5, '2026-05-23 09:00:00')
-      ON CONFLICT (id) DO UPDATE
-      SET generated_id = EXCLUDED.generated_id,
-          farm_animal_id = EXCLUDED.farm_animal_id,
-          eartag_id = EXCLUDED.eartag_id,
-          animal_variant_id = EXCLUDED.animal_variant_id,
-          branch_id = EXCLUDED.branch_id,
-          vendor_id = EXCLUDED.vendor_id,
-          entry_date = EXCLUDED.entry_date,
-          acquisition_type = EXCLUDED.acquisition_type,
-          initial_product_type = EXCLUDED.initial_product_type,
-          pen_id = EXCLUDED.pen_id,
-          pan_name = EXCLUDED.pan_name,
-          purchase_price = EXCLUDED.purchase_price,
-          initial_weight_source = EXCLUDED.initial_weight_source,
-          price_per_kg = EXCLUDED.price_per_kg,
-          shipping_cost = EXCLUDED.shipping_cost,
-          total_hpp = EXCLUDED.total_hpp,
-          horn_type = EXCLUDED.horn_type,
-          initial_weight = EXCLUDED.initial_weight,
-          initial_type = EXCLUDED.initial_type,
-          final_type = EXCLUDED.final_type,
-          weight_actual = EXCLUDED.weight_actual,
-          status = EXCLUDED.status,
-          order_item_id = EXCLUDED.order_item_id,
-          created_at = EXCLUDED.created_at
+      ON CONFLICT (id) DO NOTHING;
     `;
+
+
 
     await sql`
       INSERT INTO animal_trackings (id, farm_inventory_id, milestone, description, location_lat, location_lng, media_url, logged_at)

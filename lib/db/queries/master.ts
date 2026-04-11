@@ -4,6 +4,7 @@ export type BranchRow = {
   id: number;
   name: string;
   coaCode: string | null;
+  address: string | null;
   isActive: boolean;
 };
 
@@ -14,11 +15,28 @@ export async function listBranches() {
       id,
       name,
       coa_code as "coaCode",
+      address,
       is_active as "isActive"
     FROM branches
     ORDER BY id ASC
   `;
   return rows as unknown as BranchRow[];
+}
+
+export async function getBranchById(id: number) {
+  const sql = getDb();
+  const rows = await sql`
+    SELECT
+      id,
+      name,
+      coa_code as "coaCode",
+      address,
+      is_active as "isActive"
+    FROM branches
+    WHERE id = ${id}
+    LIMIT 1
+  `;
+  return (rows as unknown as BranchRow[])[0] || null;
 }
 
 export async function upsertBranch(input: {

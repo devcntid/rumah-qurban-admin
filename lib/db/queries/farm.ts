@@ -288,3 +288,48 @@ export async function updateFarmEartag(id: number, eartagId: string) {
     WHERE id = ${id}
   `;
 }
+
+export async function listAvailableAnimalsForOrderItem(orderItemId: number) {
+  const sql = getDb();
+  // Get variant from order item
+  const variantRows = await sql`
+    SELECT co.animal_variant_id, o.branch_id
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    JOIN catalog_offers co ON co.id = oi.catalog_offer_id
+    WHERE oi.id = ${orderItemId}
+  `;
+  if (variantRows.length === 0) return [];
+  const { animal_variant_id, branch_id } = variantRows[0] as any;
+
+  return (await sql`
+    SELECT fi.*, av.species, av.class_grade as "classGrade", av.weight_range as "weightRange"
+    FROM farm_inventories fi
+    LEFT JOIN animal_variants av ON av.id = fi.animal_variant_id
+    WHERE fi.animal_variant_id = ${animal_variant_id}
+      AND fi.branch_id = ${branch_id}
+      AND fi.status = 'AVAILABLE'
+      AND fi.order_item_id IS NULL
+    ORDER BY fi.eartag_id ASC
+  `) as unknown as FarmInventoryRow[];
+}
+
+export async function getAllocatedAnimalsForOrderItem(orderItemId: number) {
+  const sql = getDb();
+  return (await sql`
+    SELECT 
+      fi.*, 
+      av.species, 
+      av.class_grade as "classGrade", 
+      av.weight_range as "weightRange", 
+      ia.id as "allocationId",
+      v.name as "vendorName"
+    FROM farm_inventories fi
+    JOIN inventory_allocations ia ON ia.farm_inventory_id = fi.id
+    LEFT JOIN animal_variants av ON av.id = fi.animal_variant_id
+    LEFT JOIN vendors v ON v.id = fi.vendor_id
+    WHERE ia.order_item_id = ${orderItemId}
+    ORDER BY fi.eartag_id ASC
+  `) as unknown as (FarmInventoryRow & { allocationId: number, vendorName: string | null })[];
+}
+

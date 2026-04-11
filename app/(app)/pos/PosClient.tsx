@@ -6,13 +6,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { 
   ShoppingCart, Building2, User, Phone, MapPin, Plus, Trash2, 
-  Wallet, ChevronRight, ListChecks, Search, Tag, Info, Receipt
+  Wallet, ChevronRight, ListChecks, Search, Tag, Info, Receipt,
+  Minus, Filter, ChevronLeft, Map as MapIcon
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Modal } from "@/components/ui/Modal";
+import { Pagination } from "@/components/ui/Pagination";
 import { createOrderAction } from "@/lib/actions/orders";
+import { searchCatalogAction, getCatalogFiltersAction } from "@/lib/actions/catalog";
 import type { CatalogOfferRow } from "@/lib/db/queries/catalog";
 import type { ServiceRow } from "@/lib/db/queries/services";
 import type { BranchRow } from "@/lib/db/queries/master";
+import { useEffect } from "react";
+
+const MapPicker = dynamic(() => import("@/components/ui/MapPicker").then(mod => mod.MapPicker), { 
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full bg-slate-100 animate-pulse rounded-2xl flex items-center justify-center text-slate-400">Memuat Peta...</div>
+});
 
 const OrderItemSchema = z.object({
   id: z.string(), // Client-side unique ID
@@ -48,7 +58,7 @@ const PosFormSchema = z.object({
 });
 
 export function PosClient({
-  branchId,
+  branchId: defaultBranchId,
   initialCatalog,
   initialServices,
   branches,
@@ -63,6 +73,23 @@ export function PosClient({
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Catalog Search & Filter State
+  const [catalogData, setCatalogData] = useState<CatalogOfferRow[]>(initialCatalog);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterBranchId, setFilterBranchId] = useState<number | undefined>(defaultBranchId);
+  const [filterSpecies, setFilterSpecies] = useState("");
+  const [filterProductCode, setFilterProductCode] = useState("");
+  const [filterGrade, setFilterGrade] = useState("");
+  
+  // Filter Options
+  const [speciesOptions, setSpeciesOptions] = useState<string[]>([]);
+  const [productOptions, setProductOptions] = useState<{id: number, name: string, code: string}[]>([]);
+  const [gradeOptions, setGradeOptions] = useState<string[]>([]);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<z.infer<typeof PosFormSchema>>({
     resolver: zodResolver(PosFormSchema),
@@ -82,10 +109,61 @@ export function PosClient({
   const grandTotal = Math.max(0, subtotal - (Number(discountInput) || 0));
   const remainingBalance = Math.max(0, grandTotal - (Number(dpPaidInput) || 0));
 
-  const currentBranch = branches.find(b => b.id === branchId)?.name ?? "Cabang";
+  const currentBranch = branches.find(b => b.id === defaultBranchId)?.name ?? "Cabang";
+
+  // Fetch Filters on Mount
+  useEffect(() => {
+    getCatalogFiltersAction().then(res => {
+      if (res.success) {
+        setSpeciesOptions(res.species || []);
+        setProductOptions(res.products || []);
+        setGradeOptions(res.grades || []);
+      }
+    });
+  }, []);
+
+  // Fetch Catalog when filters change
+  useEffect(() => {
+    if (!isCatalogOpen) return;
+
+    const timer = setTimeout(() => {
+      setCatalogLoading(true);
+      searchCatalogAction({
+        branchId: filterBranchId,
+        species: filterSpecies || undefined,
+        productCode: filterProductCode || undefined,
+        classGrade: filterGrade || undefined,
+        q: searchTerm || undefined,
+        limit: catalogPageSize,
+        offset: (catalogPage - 1) * catalogPageSize
+      }).then(res => {
+        if (res.success && res.data) {
+          setCatalogData(res.data);
+          setCatalogTotal(res.total ?? 0);
+        }
+        setCatalogLoading(false);
+      });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isCatalogOpen, catalogPage, searchTerm, filterBranchId, filterSpecies, filterProductCode, filterGrade, catalogPageSize]);
 
   const addToCart = (item: Omit<CartItem, "id">) => {
     setCart([...cart, { ...item, id: crypto.randomUUID() }]);
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, item.quantity + delta);
+        return {
+          ...item,
+          quantity: newQty,
+          totalPrice: newQty * item.unitPrice
+        };
+      }
+      return item;
+    }));
   };
 
   const removeFromCart = (id: string) => {
@@ -119,9 +197,9 @@ export function PosClient({
     setIsSubmitting(true);
 
     try {
-      await createOrderAction({
+      const res = await createOrderAction({
         ...values,
-        branchId,
+        branchId: defaultBranchId,
         subtotal,
         discount: values.discount ?? 0,
         grandTotal,
@@ -130,6 +208,16 @@ export function PosClient({
         status: dpPaidInput >= grandTotal ? "FULL_PAID" : dpPaidInput > 0 ? "DP_PAID" : "PENDING",
         items: cart.map(({ id, ...rest }) => rest), // Remove client-side id
       });
+      // Reset form on success
+      setCart([]);
+      setValue("discount", 0);
+      setValue("dpPaid", 0);
+      setIsSubmitting(false);
+      
+      // Open Invoice in New Tab
+      if (res.success && (res as any).orderId) {
+        window.open(`/api/orders/${(res as any).orderId}/invoice`, "_blank");
+      }
     } catch (e: any) {
       setError(e.message || "Terjadi kesalahan saat menyimpan pesanan");
       setIsSubmitting(false);
@@ -220,22 +308,46 @@ export function PosClient({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 md:col-span-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide italic">Latitude</label>
-                  <input 
-                    type="number" step="any"
-                    {...register("latitude", { valueAsNumber: true })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium bg-slate-50"
+              <div className="md:col-span-2 space-y-4 pt-2">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center gap-2">
+                        <MapIcon size={18} className="text-blue-600"/>
+                        <span className="text-sm font-bold text-slate-800 uppercase tracking-tight">Titik Lokasi Pengiriman (Opsional)</span>
+                     </div>
+                     <span className="text-[10px] bg-blue-100 text-blue-700 font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">Map Picker</span>
+                  </div>
+                  
+                  <MapPicker 
+                    initialLat={watch("latitude") || undefined}
+                    initialLng={watch("longitude") || undefined}
+                    onLocationSelect={(lat, lng, addr) => {
+                      setValue("latitude", lat);
+                      setValue("longitude", lng);
+                      if (addr && !watch("deliveryAddress")) {
+                        setValue("deliveryAddress", addr);
+                      }
+                    }}
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide italic">Longitude</label>
-                  <input 
-                    type="number" step="any"
-                    {...register("longitude", { valueAsNumber: true })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium bg-slate-50"
-                  />
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Latitude</label>
+                      <input 
+                        type="number" step="any"
+                        {...register("latitude", { valueAsNumber: true })}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Longitude</label>
+                      <input 
+                        type="number" step="any"
+                        {...register("longitude", { valueAsNumber: true })}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -283,7 +395,26 @@ export function PosClient({
                            <span className="text-[10px] font-mono text-slate-400">COA: {item.coaCode ?? "-"}</span>
                         </div>
                         <h4 className="font-bold text-slate-800 text-lg leading-tight">{item.itemName}</h4>
-                        <p className="text-sm text-slate-500 font-medium">{item.quantity} x {formatIDR(item.unitPrice)}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                           <button 
+                             type="button" 
+                             onClick={() => updateQuantity(item.id, -1)}
+                             className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-100 hover:border-slate-400 text-slate-700 transition-all shadow-sm active:scale-95"
+                           >
+                             <Minus size={14} strokeWidth={3}/>
+                           </button>
+                           <span className="w-10 text-center font-black text-lg text-[#102a43]">{item.quantity}</span>
+                           <button 
+                             type="button" 
+                             onClick={() => updateQuantity(item.id, 1)}
+                             className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-blue-50 hover:border-blue-400 text-blue-600 transition-all shadow-sm active:scale-95"
+                           >
+                             <Plus size={14} strokeWidth={3}/>
+                           </button>
+                           <span className="text-[11px] text-slate-600 font-bold ml-2 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                             @ {formatIDR(item.unitPrice)}
+                           </span>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-slate-800 text-lg">{formatIDR(item.totalPrice)}</p>
@@ -416,44 +547,160 @@ export function PosClient({
         open={isCatalogOpen} 
         onClose={() => setIsCatalogOpen(false)} 
         title="Katalog Hewan Qurban"
-        maxWidthClassName="max-w-4xl"
+        maxWidthClassName="max-w-5xl"
       >
-        <div className="space-y-4">
-           {initialCatalog.length === 0 ? (
-             <p className="p-8 text-center text-slate-500 italic">Tidak ada produk tersedia di cabang ini.</p>
+        <div className="space-y-6">
+           {/* Filters & Search */}
+           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div className="md:col-span-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Cabang</label>
+                  <select 
+                    value={filterBranchId || ""} 
+                    onChange={(e) => {
+                      setFilterBranchId(e.target.value ? Number(e.target.value) : undefined);
+                      setCatalogPage(1);
+                    }}
+                    className="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Semua Cabang</option>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Spesies</label>
+                  <select 
+                    value={filterSpecies} 
+                    onChange={(e) => {
+                      setFilterSpecies(e.target.value);
+                      setCatalogPage(1);
+                    }}
+                    className="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Semua Spesies</option>
+                    {speciesOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Variasi/Grade</label>
+                  <select 
+                    value={filterGrade} 
+                    onChange={(e) => {
+                      setFilterGrade(e.target.value);
+                      setCatalogPage(1);
+                    }}
+                    className="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Semua Grade</option>
+                    {gradeOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Produk</label>
+                  <select 
+                    value={filterProductCode} 
+                    onChange={(e) => {
+                      setFilterProductCode(e.target.value);
+                      setCatalogPage(1);
+                    }}
+                    className="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Semua Produk</option>
+                    {productOptions.map(p => <option key={p.id} value={p.code}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Cari Term</label>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-2.5 text-slate-400"/>
+                    <input 
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCatalogPage(1);
+                      }}
+                      placeholder="Nama, SKU, Tipe..."
+                      className="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs outline-none bg-white focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </div>
+           </div>
+
+           {/* Catalog List */}
+           {catalogLoading ? (
+             <div className="p-12 text-center flex flex-col items-center gap-3">
+               <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+               <p className="text-sm text-slate-500 font-medium">Memuat katalog...</p>
+             </div>
+           ) : catalogData.length === 0 ? (
+             <p className="p-12 text-center text-slate-500 italic bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+               Tidak ada produk yang sesuai dengan filter.
+             </p>
            ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {initialCatalog.map((offer) => (
-                 <div 
-                   key={offer.id} 
-                   className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50 cursor-pointer group transition-all hover:border-blue-300"
-                   onClick={() => {
-                     addToCart({
-                       itemType: "ANIMAL",
-                       catalogOfferId: offer.id,
-                       itemName: offer.displayName,
-                       quantity: 1,
-                       unitPrice: Number(offer.price),
-                       totalPrice: Number(offer.price),
-                       coaCode: "ANIMAL_PRODUCT",
-                       participants: [{ name: "", fatherName: "" }]
-                     });
-                     setIsCatalogOpen(false);
-                   }}
-                 >
-                   <div className="flex gap-4">
-                     <div className="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden shrink-0">
-                       {offer.imageUrl ? <img src={offer.imageUrl} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full"><Tag className="text-slate-300"/></div>}
-                     </div>
-                     <div className="flex-1">
-                       <h4 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{offer.displayName}</h4>
-                       <p className="text-xs text-slate-500 mb-2">{offer.subType ?? "Standard"} • {offer.weightRange ?? "?"} Kg</p>
-                       <p className="text-sm font-bold text-green-700">{formatIDR(Number(offer.price))}</p>
+             <>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 {catalogData.map((offer) => (
+                   <div 
+                     key={offer.id} 
+                     className="p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer group transition-all hover:border-blue-400 hover:shadow-sm"
+                     onClick={() => {
+                       addToCart({
+                         itemType: "ANIMAL",
+                         catalogOfferId: offer.id,
+                         itemName: offer.displayName,
+                         quantity: 1,
+                         unitPrice: Number(offer.price),
+                         totalPrice: Number(offer.price),
+                         coaCode: "ANIMAL_PRODUCT",
+                         participants: [{ name: "", fatherName: "" }]
+                       });
+                       setIsCatalogOpen(false);
+                     }}
+                   >
+                     <div className="flex gap-3">
+                       <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-slate-100">
+                         {offer.imageUrl ? <img src={offer.imageUrl} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full"><Tag className="text-slate-300"/></div>}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-1.5 mb-0.5">
+                           <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[9px] font-bold text-slate-500 flex items-center gap-1">
+                             <Building2 size={10}/> {offer.branchName || "Global"}
+                           </span>
+                         </div>
+                         <h4 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors truncate">{offer.displayName}</h4>
+                         <p className="text-[10px] text-slate-500 mb-1 font-medium">{offer.subType ?? "Standard"} • {offer.offerWeightRange ?? "?"} Kg</p>
+                         <p className="text-xs font-black text-blue-700">{formatIDR(Number(offer.price))}</p>
+                       </div>
                      </div>
                    </div>
-                 </div>
-               ))}
-             </div>
+                 ))}
+               </div>
+
+               {/* Pagination UI - Custom for Modal */}
+               <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">
+                    Menampilkan <span className="text-slate-700">{catalogData.length}</span> dari <span className="text-slate-700">{catalogTotal}</span> produk
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      disabled={catalogPage <= 1}
+                      onClick={() => setCatalogPage(p => p - 1)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 disabled:opacity-30 flex items-center gap-1"
+                    >
+                      <ChevronLeft size={14}/> Prev
+                    </button>
+                    <span className="text-xs font-black px-3 py-1.5 bg-slate-100 rounded-lg">{catalogPage}</span>
+                    <button 
+                      disabled={catalogPage * catalogPageSize >= catalogTotal}
+                      onClick={() => setCatalogPage(p => p + 1)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 disabled:opacity-30 flex items-center gap-1"
+                    >
+                      Next <ChevronRight size={14}/>
+                    </button>
+                  </div>
+               </div>
+             </>
            )}
         </div>
       </Modal>

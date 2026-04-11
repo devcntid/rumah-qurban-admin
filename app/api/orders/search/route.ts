@@ -1,14 +1,42 @@
 import { NextResponse } from "next/server";
-import { searchOrders } from "@/lib/db/queries/orders";
+import { getDb } from "@/lib/db/client";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const term = searchParams.get("term");
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q");
+    if (!q) return NextResponse.json([]);
 
-  if (!term || term.length < 3) {
-    return NextResponse.json([]);
+    const sql = getDb();
+    const s = `%${q}%`;
+    
+    // Search orders and include items
+    const orders = await sql`
+      SELECT 
+        o.id, 
+        o.invoice_number as "invoiceNumber", 
+        o.customer_name as "customerName",
+        b.name as "branchName"
+      FROM orders o
+      JOIN branches b ON b.id = o.branch_id
+      WHERE o.invoice_number ILIKE ${s} OR o.customer_name ILIKE ${s}
+      ORDER BY o.created_at DESC
+      LIMIT 10
+    `;
+
+    // Fetch items for each order
+    const results = await Promise.all(orders.map(async (o: any) => {
+      const items = await sql`
+        SELECT id, item_name as "itemName", item_type as "itemType", quantity
+        FROM order_items
+        WHERE order_id = ${o.id} AND catalog_offer_id IS NOT NULL
+      `;
+      return { ...o, items };
+    }));
+
+    return NextResponse.json(results);
+  } catch (error) {
+    console.error("API Search Orders Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-
-  const orders = await searchOrders(term);
-  return NextResponse.json(orders);
 }

@@ -14,7 +14,8 @@ import {
   Trash2, 
   Loader2,
   Box,
-  MapPin
+  MapPin,
+  CheckCircle2
 } from "lucide-react";
 import { 
   saveInventoryAction, 
@@ -24,6 +25,8 @@ import {
   deletePenAction,
   patchEartagAction
 } from "@/lib/actions/farm";
+import { bulkAllocateAction } from "@/lib/actions/allocations";
+import { BulkMatchModal } from "./BulkMatchModal";
 import { Pagination } from "@/components/ui/Pagination";
 import { FiltersBar } from "@/components/ui/FiltersBar";
 import * as XLSX from "xlsx";
@@ -151,6 +154,8 @@ export default function FarmClient({
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedPen, setSelectedPen] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkMatchOpen, setIsBulkMatchOpen] = useState(false);
 
   // Single Form State
   const [formData, setFormData] = useState<any>({});
@@ -238,6 +243,20 @@ export default function FarmClient({
       await deletePenAction(id);
       toast.success("Kandang berhasil dihapus");
     });
+  };
+
+  const handleSelectItem = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === initialData.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(initialData.map(i => i.id));
+    }
   };
 
   // EXCEL LOGIC
@@ -540,6 +559,14 @@ export default function FarmClient({
               <table className="w-full text-left border-collapse min-w-[1800px]">
                 <thead>
                   <tr className="bg-slate-50/80 text-[11px] uppercase text-slate-500 border-b border-slate-200">
+                    <th className="px-4 py-3 font-bold w-12 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedIds.length > 0 && selectedIds.length === initialData.length}
+                        onChange={handleSelectAll}
+                      />
+                    </th>
                     <th className="px-4 py-3 font-bold w-12 text-center">No</th>
                     <th className="px-4 py-3 font-bold">Generated ID</th>
                     <th className="px-4 py-3 font-bold">Farm Animal ID</th>
@@ -580,6 +607,14 @@ export default function FarmClient({
                   )}
                   {initialData.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-4 py-3 text-center">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => handleSelectItem(item.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-center text-slate-400 font-mono text-xs">
                         {(page - 1) * pageSize + index + 1}
                       </td>
@@ -669,7 +704,7 @@ export default function FarmClient({
               </table>
             </div>
             <div className="p-6 border-t bg-slate-50/50">
-              <Pagination page={page} pageSize={pageSize} hasNext={initialData.length === pageSize} />
+              <Pagination page={page} pageSize={pageSize} totalItems={totalCount} />
             </div>
           </div>
         </>
@@ -732,6 +767,43 @@ export default function FarmClient({
         vendors={vendors}
         variants={variants}
       />
+
+      {/* BULK MATCH MODAL */}
+      <BulkMatchModal 
+        open={isBulkMatchOpen} 
+        onClose={() => {
+          setIsBulkMatchOpen(false);
+          setSelectedIds([]);
+        }}
+        inventoryIds={selectedIds}
+      />
+
+      {/* FLOATING ACTION BAR FOR SELECTION */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-[#102a43] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 border border-slate-700">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Terpilih</span>
+              <span className="text-sm font-black">{selectedIds.length} Hewan</span>
+            </div>
+            <div className="h-8 w-px bg-slate-700"></div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setIsBulkMatchOpen(true)}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95"
+              >
+                <CheckCircle2 size={16} /> Pasangkan ke Order
+              </button>
+              <button 
+                onClick={() => setSelectedIds([])}
+                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2.5 rounded-xl text-xs font-black transition-all"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SINGLE ENTRY INVENTORY MODAL */}
       <Modal 

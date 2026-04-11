@@ -21,6 +21,7 @@ export const branches = pgTable(
     id: bigserial("id", { mode: "number" }).primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
     coaCode: varchar("coa_code", { length: 50 }),
+    address: text("address"),
     isActive: boolean("is_active").default(true),
   },
   (t) => [uniqueIndex("branches_name_uniq").on(t.name)]
@@ -111,6 +112,8 @@ export const catalogOffers = pgTable(
     subType: varchar("sub_type", { length: 50 }),
     skuCode: varchar("sku_code", { length: 50 }),
     projectedWeight: varchar("projected_weight", { length: 50 }),
+    weightRange: varchar("weight_range", { length: 50 }),
+    description: text("description"),
     price: numeric("price", { precision: 15, scale: 2 }).notNull(),
     imageUrl: text("image_url"),
     isActive: boolean("is_active").default(true),

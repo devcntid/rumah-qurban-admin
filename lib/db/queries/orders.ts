@@ -16,9 +16,54 @@ export type OrderListRow = {
   status: string;
 };
 
-export async function listOrdersByBranch(branchId: number) {
+export async function listOrders(params: {
+  branchId?: number;
+  customerType?: string;
+  status?: string;
+  q?: string;
+  startDate?: string;
+  endDate?: string;
+  limit: number;
+  offset: number;
+}) {
   const sql = getDb();
-  const rows = await sql`
+  const where: string[] = ["1=1"];
+  const values: unknown[] = [];
+
+  if (params.branchId) {
+    values.push(params.branchId);
+    where.push(`branch_id = $${values.length}`);
+  }
+
+  if (params.customerType) {
+    values.push(params.customerType);
+    where.push(`customer_type = $${values.length}`);
+  }
+
+  if (params.status) {
+    values.push(params.status);
+    where.push(`status = $${values.length}`);
+  }
+
+  if (params.startDate) {
+    values.push(params.startDate);
+    where.push(`created_at >= $${values.length}::timestamp`);
+  }
+
+  if (params.endDate) {
+    values.push(`${params.endDate} 23:59:59`);
+    where.push(`created_at <= $${values.length}::timestamp`);
+  }
+
+  if (params.q) {
+    values.push(`%${params.q}%`);
+    const p = values.length;
+    where.push(
+      `(invoice_number ILIKE $${p} OR customer_name ILIKE $${p} OR customer_phone ILIKE $${p})`
+    );
+  }
+
+  const query = `
     SELECT
       id,
       created_at as "createdAt",
@@ -34,12 +79,86 @@ export async function listOrdersByBranch(branchId: number) {
       remaining_balance::text as "remainingBalance",
       status
     FROM orders
-    WHERE branch_id = ${branchId}
+    WHERE ${where.join(" AND ")}
     ORDER BY created_at DESC, id DESC
-    LIMIT 200
+    LIMIT ${params.limit} OFFSET ${params.offset}
   `;
+
+  const rows = await sql.query(query, values);
   return rows as unknown as OrderListRow[];
 }
+
+export async function countOrders(params: {
+  branchId?: number;
+  customerType?: string;
+  status?: string;
+  q?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const sql = getDb();
+  const where: string[] = ["1=1"];
+  const values: unknown[] = [];
+
+  if (params.branchId) {
+    values.push(params.branchId);
+    where.push(`branch_id = $${values.length}`);
+  }
+
+  if (params.customerType) {
+    values.push(params.customerType);
+    where.push(`customer_type = $${values.length}`);
+  }
+
+  if (params.status) {
+    values.push(params.status);
+    where.push(`status = $${values.length}`);
+  }
+
+  if (params.startDate) {
+    values.push(params.startDate);
+    where.push(`created_at >= $${values.length}::timestamp`);
+  }
+
+  if (params.endDate) {
+    values.push(`${params.endDate} 23:59:59`);
+    where.push(`created_at <= $${values.length}::timestamp`);
+  }
+
+  if (params.q) {
+    values.push(`%${params.q}%`);
+    const p = values.length;
+    where.push(
+      `(invoice_number ILIKE $${p} OR customer_name ILIKE $${p} OR customer_phone ILIKE $${p})`
+    );
+  }
+
+  const query = `
+    SELECT count(*)
+    FROM orders
+    WHERE ${where.join(" AND ")}
+  `;
+
+  const rows = await sql.query(query, values);
+  return parseInt((rows as any)[0].count);
+}
+
+export async function deleteOrder(id: number) {
+  const sql = getDb();
+  // Cascade delete handles order_items, order_participants, inventory_allocations
+  // but we should reset farm_inventories status if any were linked
+  await sql`
+    UPDATE farm_inventories 
+    SET status = 'AVAILABLE', order_item_id = NULL 
+    WHERE order_item_id IN (SELECT id FROM order_items WHERE order_id = ${id})
+  `;
+  await sql`DELETE FROM orders WHERE id = ${id}`;
+}
+
+export async function listOrdersByBranch(branchId: number) {
+  return listOrders({ branchId, limit: 200, offset: 0 });
+}
+
 
 export type OrderItemRow = {
   id: number;

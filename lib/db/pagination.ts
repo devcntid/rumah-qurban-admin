@@ -11,7 +11,7 @@ export function getPageParams(searchParams: Record<string, string | string[] | u
     typeof searchParams.pageSize === "string" ? searchParams.pageSize : undefined;
 
   const page = Math.max(1, Number(pageRaw ?? 1) || 1);
-  const pageSize = Math.min(100, Math.max(10, Number(pageSizeRaw ?? 50) || 50));
+  const pageSize = Math.min(100, Math.max(10, Number(pageSizeRaw ?? 10) || 10));
   const offset = (page - 1) * pageSize;
   return { page, pageSize, offset, limit: pageSize } satisfies PageParams;
 }
