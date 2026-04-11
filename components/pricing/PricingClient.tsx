@@ -77,7 +77,8 @@ export default function PricingClient({
         setIsModalOpen(false);
       } else {
         if (res.fieldErrors) {
-          const errorMsg = Object.entries(res.fieldErrors)
+          const fieldErrors = res.fieldErrors as Record<string, string[]>;
+          const errorMsg = Object.entries(fieldErrors)
             .map(([field, msgs]) => `${field}: ${msgs.join(", ")}`)
             .join(". ");
           toast.error("Gagal menyimpan", { description: errorMsg });
