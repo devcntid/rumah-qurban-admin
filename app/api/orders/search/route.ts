@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     `;
 
     // Fetch items for each order
-    const results = await Promise.all(orders.map(async (o: any) => {
+    const results = await Promise.all((orders as any[]).map(async (o: any) => {
       const items = await sql`
         SELECT id, item_name as "itemName", item_type as "itemType", quantity
         FROM order_items
