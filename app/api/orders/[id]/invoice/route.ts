@@ -39,7 +39,7 @@ export async function GET(
         participants: data.participants,
         branch: branch,
         logoPath: logoPath,
-      })
+      }) as any
     );
 
     // Convert stream to response
