@@ -115,9 +115,11 @@ export function PosClient({
   useEffect(() => {
     getCatalogFiltersAction().then(res => {
       if (res.success) {
-        setSpeciesOptions(res.species || []);
-        setProductOptions(res.products || []);
-        setGradeOptions(res.grades || []);
+        // Type narrowing for successful response
+        const data = res as { species: string[]; products: any[]; grades: string[] };
+        setSpeciesOptions(data.species || []);
+        setProductOptions(data.products || []);
+        setGradeOptions(data.grades || []);
       }
     });
   }, []);
