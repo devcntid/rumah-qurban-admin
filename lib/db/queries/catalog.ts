@@ -164,7 +164,7 @@ export async function countCatalogOffers(params: {
 
 export async function getCatalogOfferById(id: number) {
   const sql = getDb();
-  const rows = await sql`
+  const rows = (await sql`
     SELECT id, product_id as "productId", animal_variant_id as "animalVariantId", 
            branch_id as "branchId", vendor_id as "vendorId", display_name as "displayName", 
            sub_type as "subType", sku_code as "skuCode", projected_weight as "projectedWeight", 
@@ -172,7 +172,7 @@ export async function getCatalogOfferById(id: number) {
            is_active as "isActive"
     FROM catalog_offers
     WHERE id = ${id}
-  `;
+  `) as Record<string, unknown>[];
   return rows[0] as any;
 }
 
@@ -216,7 +216,7 @@ export async function saveCatalogOffer(data: any) {
     `;
     return { id };
   } else {
-    const rows = await sql`
+    const rows = (await sql`
       INSERT INTO catalog_offers (
         product_id, animal_variant_id, branch_id, vendor_id, 
         display_name, sub_type, sku_code, projected_weight, 
@@ -227,8 +227,8 @@ export async function saveCatalogOffer(data: any) {
         ${weightRange}, ${description}, ${price}, ${imageUrl}, ${isActive}
       )
       RETURNING id
-    `;
-    return rows[0] as { id: number };
+    `) as { id: number }[];
+    return rows[0];
   }
 }
 

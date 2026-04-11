@@ -292,15 +292,15 @@ export async function updateFarmEartag(id: number, eartagId: string) {
 export async function listAvailableAnimalsForOrderItem(orderItemId: number) {
   const sql = getDb();
   // Get variant from order item
-  const variantRows = await sql`
+  const variantRows = (await sql`
     SELECT co.animal_variant_id, o.branch_id
     FROM order_items oi
     JOIN orders o ON o.id = oi.order_id
     JOIN catalog_offers co ON co.id = oi.catalog_offer_id
     WHERE oi.id = ${orderItemId}
-  `;
+  `) as { animal_variant_id: number; branch_id: number }[];
   if (variantRows.length === 0) return [];
-  const { animal_variant_id, branch_id } = variantRows[0] as any;
+  const { animal_variant_id, branch_id } = variantRows[0];
 
   return (await sql`
     SELECT fi.*, av.species, av.class_grade as "classGrade", av.weight_range as "weightRange"

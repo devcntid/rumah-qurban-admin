@@ -30,12 +30,12 @@ export async function allocateAnimalAction(inventoryId: number, orderItemId: num
 export async function deallocateAnimalAction(allocationId: number) {
   const sql = getDb();
   try {
-    const allocation = await sql`
+    const allocation = (await sql`
       SELECT farm_inventory_id, order_item_id FROM inventory_allocations WHERE id = ${allocationId}
-    `;
+    `) as { farm_inventory_id: number; order_item_id: number }[];
     if (allocation.length === 0) throw new Error("Alokasi tidak ditemukan");
-    
-    const { farm_inventory_id } = allocation[0] as any;
+
+    const { farm_inventory_id } = allocation[0];
 
     // 1. Delete allocation
     await sql`DELETE FROM inventory_allocations WHERE id = ${allocationId}`;

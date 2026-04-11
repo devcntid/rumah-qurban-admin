@@ -17,7 +17,7 @@ const FarmInventorySchema = z.object({
   generatedId: z.string().optional(),
   farmAnimalId: z.string().optional().nullable(),
   eartagId: z.string().min(1, "ID Tag (Eartag) wajib diisi"),
-  animalVariantId: z.number({ required_error: "Varian hewan wajib dipilih", invalid_type_error: "Varian hewan wajib dipilih" }).min(1, "Varian hewan wajib dipilih"),
+  animalVariantId: z.number("Varian hewan wajib dipilih").min(1, "Varian hewan wajib dipilih"),
   vendorId: z.number().optional().nullable(),
   entryDate: z.string().optional().nullable(),
   acquisitionType: z.string().optional().nullable(),

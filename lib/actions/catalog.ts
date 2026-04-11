@@ -13,8 +13,8 @@ import {
 
 const catalogOfferSchema = z.object({
   id: z.number().optional(),
-  productId: z.number({ required_error: "Produk wajib dipilih" }),
-  animalVariantId: z.number({ required_error: "Varian hewan wajib dipilih" }),
+  productId: z.number("Produk wajib dipilih"),
+  animalVariantId: z.number("Varian hewan wajib dipilih"),
   branchId: z.number().nullable(),
   vendorId: z.number().nullable(),
   displayName: z.string().min(1, "Nama penawaran wajib diisi"),

@@ -92,9 +92,9 @@ export function MapPicker({ initialLat, initialLng, onLocationSelect }: MapPicke
 
   // Important: we only update the parent when the coordinate actually changes from user interaction
   // to avoid infinite loops with the external state syncing
-  const handleMapClick = (lat: number, lng: number) => {
-    setPosition([lat, lng]);
-    onLocationSelect(lat, lng);
+  const handleMapClick = (pos: [number, number]) => {
+    setPosition(pos);
+    onLocationSelect(pos[0], pos[1]);
   };
 
   if (!mounted) return null;

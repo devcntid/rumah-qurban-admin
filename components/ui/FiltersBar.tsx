@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 export type FilterField =
   | { key: string; label: string; type: "text"; placeholder?: string }
   | { key: string; label: string; type: "number"; placeholder?: string }
-  | { key: string; label: string; type: "date" }
+  | { key: string; label: string; type: "date"; placeholder?: string }
   | { key: string; label: string; type: "select"; options: { label: string; value: string }[] };
 
 export function FiltersBar({

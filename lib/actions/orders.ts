@@ -159,14 +159,14 @@ export async function createOrderAction(data: z.infer<typeof CreateOrderSchema>)
         )
       `;
     }
+
+    revalidatePath("/orders");
+    revalidatePath("/pos");
+    return { success: true, orderId, invoiceNumber };
   } catch (error) {
     console.error("Create Order Error:", error);
     return { success: false, message: "Gagal membuat pesanan di database" };
   }
-  
-  revalidatePath("/orders");
-  revalidatePath("/pos");
-  return { success: true, orderId: orderId, invoiceNumber: invoiceNumber };
 }
 
 export async function deleteOrderAction(id: number) {
