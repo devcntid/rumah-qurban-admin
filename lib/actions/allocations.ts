@@ -17,9 +17,20 @@ export async function allocateAnimalAction(inventoryId: number, orderItemId: num
       SET status = 'ALLOCATED', order_item_id = ${orderItemId}
       WHERE id = ${inventoryId}
     `;
-    
+
+    await sql`
+      INSERT INTO animal_trackings (farm_inventory_id, milestone, description, logged_at)
+      VALUES (
+        ${inventoryId},
+        'Dialokasikan ke pesanan',
+        'Hewan dicocokkan dengan item pesanan (alokasi ke order).',
+        NOW()
+      )
+    `;
+
     revalidatePath("/orders/[id]", "page");
     revalidatePath("/farm");
+    revalidatePath("/logistics");
     return { success: true };
   } catch (error) {
     console.error("Allocate Animal Error:", error);
@@ -49,6 +60,7 @@ export async function deallocateAnimalAction(allocationId: number) {
 
     revalidatePath("/orders/[id]", "page");
     revalidatePath("/farm");
+    revalidatePath("/logistics");
     return { success: true };
   } catch (error) {
     console.error("Deallocate Animal Error:", error);
@@ -70,10 +82,21 @@ export async function bulkAllocateAction(inventoryIds: number[], orderItemId: nu
         SET status = 'ALLOCATED', order_item_id = ${orderItemId}
         WHERE id = ${id}
       `;
+
+      await sql`
+        INSERT INTO animal_trackings (farm_inventory_id, milestone, description, logged_at)
+        VALUES (
+          ${id},
+          'Dialokasikan ke pesanan',
+          'Hewan dicocokkan dengan item pesanan (alokasi ke order).',
+          NOW()
+        )
+      `;
     }
-    
+
     revalidatePath("/orders/[id]", "page");
     revalidatePath("/farm");
+    revalidatePath("/logistics");
     return { success: true };
   } catch (error) {
     console.error("Bulk Allocate Error:", error);

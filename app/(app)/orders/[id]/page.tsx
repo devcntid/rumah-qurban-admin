@@ -3,8 +3,8 @@ import { getSession } from "@/lib/auth/session";
 import { getOrderWithItems } from "@/lib/db/queries/orders";
 import { getAllocatedAnimalsForOrderItem } from "@/lib/db/queries/farm";
 import { 
-  ArrowLeft, User, Phone, MapPin, Wallet, Receipt, 
-  ShoppingCart, ListChecks, Calendar, CheckCircle2, Clock, MapIcon
+  ArrowLeft, User, Phone, MapPin, Wallet, Receipt, Pencil,
+  ShoppingCart, ListChecks, Calendar, CheckCircle2, MapIcon
 } from "lucide-react";
 import Link from "next/link";
 import { OrderTransactionsSection } from "./OrderTransactionsSection";
@@ -39,7 +39,8 @@ export default async function OrderDetailPage({
   const session = await getSession();
   if (!session) notFound();
 
-  const bundle = await getOrderWithItems(orderId, session.branchId);
+  const branchFilter = session.role === "SUPER_ADMIN" ? null : session.branchId;
+  const bundle = await getOrderWithItems(orderId, branchFilter);
   if (!bundle) notFound();
 
   const { order, items, participants, transactions } = bundle;
@@ -57,6 +58,9 @@ export default async function OrderDetailPage({
       return { ...it, allocations };
     })
   );
+
+  const canEditOrder =
+    session.role === "SUPER_ADMIN" || session.role === "ADMIN_CABANG";
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -79,13 +83,24 @@ export default async function OrderDetailPage({
             <Calendar size={12}/> Dibuat pada {new Date(order.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <a 
-          href={`/api/orders/${order.id}/invoice`}
-          target="_blank"
-          className="hidden md:flex items-center gap-2 bg-[#102a43] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-lg hover:bg-slate-800 transition-all hover:-translate-y-0.5 active:scale-95 shadow-blue-900/10"
-        >
-          <Receipt size={16} /> Cetak Invoice
-        </a>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+          {canEditOrder && (
+            <Link
+              href={`/pos?edit=${order.id}`}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300"
+            >
+              <Pencil size={16} />
+              Edit di POS
+            </Link>
+          )}
+          <a
+            href={`/api/orders/${order.id}/invoice`}
+            target="_blank"
+            className="flex items-center justify-center gap-2 bg-[#102a43] text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-lg hover:bg-slate-800 transition-all hover:-translate-y-0.5 active:scale-95 shadow-blue-900/10"
+          >
+            <Receipt size={16} /> Cetak Invoice
+          </a>
+        </div>
       </div>
 
       {/* Overview Cards */}

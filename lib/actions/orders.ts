@@ -1,9 +1,13 @@
 "use server";
 
 import { getDb } from "@/lib/db/client";
+import { getSession } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  updateOrderFormSchema,
+  type UpdateOrderFormValues,
+} from "@/lib/validations/order-edit";
 
 const OrderItemSchema = z.object({
   itemType: z.string(),
@@ -178,6 +182,288 @@ export async function deleteOrderAction(id: number) {
   } catch (error) {
     console.error("Delete Order Error:", error);
     return { success: false, error: "Gagal menghapus pesanan" };
+  }
+}
+
+export async function updateOrderAction(
+  input: UpdateOrderFormValues
+): Promise<{ success: true } | { success: false; error: string }> {
+  const session = await getSession();
+  if (!session) {
+    return { success: false, error: "Sesi tidak valid." };
+  }
+  if (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN_CABANG") {
+    return { success: false, error: "Anda tidak punya izin mengubah pesanan." };
+  }
+
+  const parsed = updateOrderFormSchema.safeParse(input);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Data tidak valid";
+    return { success: false, error: msg };
+  }
+  const d = parsed.data;
+
+  const sql = getDb();
+  const existing = (await sql`
+    SELECT id, branch_id FROM orders WHERE id = ${d.orderId} LIMIT 1
+  `) as { id: number; branch_id: number | null }[];
+  if (existing.length === 0) {
+    return { success: false, error: "Pesanan tidak ditemukan." };
+  }
+
+  const superAdmin = session.role === "SUPER_ADMIN";
+  const row = existing[0];
+  if (!superAdmin) {
+    if (row.branch_id == null || row.branch_id !== session.branchId) {
+      return { success: false, error: "Akses ditolak untuk pesanan ini." };
+    }
+  }
+
+  const branchId = superAdmin ? d.branchId : session.branchId;
+  const companyName =
+    d.customerType === "B2B" ? (d.companyName?.trim() ? d.companyName.trim() : null) : null;
+
+  const grandTotal = Math.max(0, d.subtotal - d.discount);
+  const remainingBalance = Math.max(0, grandTotal - d.dpPaid);
+
+  try {
+    await sql`
+      UPDATE orders SET
+        branch_id = ${branchId},
+        customer_type = ${d.customerType},
+        customer_name = ${d.customerName.trim()},
+        company_name = ${companyName},
+        customer_phone = ${d.customerPhone?.trim() ? d.customerPhone.trim() : null},
+        customer_email = ${d.customerEmail},
+        delivery_address = ${d.deliveryAddress?.trim() ? d.deliveryAddress.trim() : null},
+        latitude = ${d.latitude ?? null},
+        longitude = ${d.longitude ?? null},
+        subtotal = ${d.subtotal},
+        discount = ${d.discount},
+        grand_total = ${grandTotal},
+        dp_paid = ${d.dpPaid},
+        remaining_balance = ${remainingBalance},
+        status = ${d.status}
+      WHERE id = ${d.orderId}
+    `;
+    revalidatePath(`/orders/${d.orderId}`);
+    revalidatePath("/orders");
+    return { success: true };
+  } catch (e) {
+    console.error("updateOrderAction", e);
+    return { success: false, error: "Gagal menyimpan perubahan pesanan." };
+  }
+}
+
+const ViaPosItemSchema = z.object({
+  orderItemId: z.number().int().positive().optional(),
+  itemType: z.string(),
+  catalogOfferId: z.number().optional().nullable(),
+  serviceId: z.number().optional().nullable(),
+  itemName: z.string(),
+  quantity: z.number().min(1),
+  unitPrice: z.number(),
+  totalPrice: z.number(),
+  coaCode: z.string().optional().nullable(),
+  participants: z
+    .array(
+      z.object({
+        name: z.string(),
+        fatherName: z.string().optional().nullable(),
+      })
+    )
+    .default([]),
+});
+
+const UpdateViaPosSchema = z.object({
+  orderId: z.number().int().positive(),
+  customerType: z.enum(["B2B", "B2C"]),
+  customerName: z.string().min(1),
+  companyName: z.string().optional().nullable(),
+  customerPhone: z.string().min(1),
+  customerEmail: z.string().optional().nullable(),
+  deliveryAddress: z.string().optional().nullable(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  discount: z.number().nonnegative(),
+  dpPaid: z.number().nonnegative(),
+  subtotal: z.number().nonnegative(),
+  status: z.enum(["PENDING", "DP_PAID", "FULL_PAID", "CANCELLED"]),
+  items: z.array(ViaPosItemSchema).min(1),
+});
+
+export async function updateOrderViaPosAction(
+  input: unknown
+): Promise<{ success: true; orderId: number } | { success: false; error: string }> {
+  const session = await getSession();
+  if (!session) {
+    return { success: false, error: "Sesi tidak valid." };
+  }
+  if (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN_CABANG") {
+    return { success: false, error: "Anda tidak punya izin mengubah pesanan." };
+  }
+
+  const parsed = UpdateViaPosSchema.safeParse(input);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Data tidak valid";
+    return { success: false, error: msg };
+  }
+  const d = parsed.data;
+
+  const sql = getDb();
+  const existing = (await sql`
+    SELECT id, branch_id FROM orders WHERE id = ${d.orderId} LIMIT 1
+  `) as { id: number; branch_id: number | null }[];
+  if (existing.length === 0) {
+    return { success: false, error: "Pesanan tidak ditemukan." };
+  }
+
+  const superAdmin = session.role === "SUPER_ADMIN";
+  const row = existing[0];
+  if (!superAdmin) {
+    if (row.branch_id == null || row.branch_id !== session.branchId) {
+      return { success: false, error: "Akses ditolak untuk pesanan ini." };
+    }
+  }
+
+  const existingItems = (await sql`
+    SELECT id FROM order_items WHERE order_id = ${d.orderId}
+  `) as { id: number }[];
+  const existingIds = new Set(existingItems.map((r) => r.id));
+  const cartDbIds = new Set(
+    d.items.map((i) => i.orderItemId).filter((x): x is number => typeof x === "number")
+  );
+  for (const id of existingIds) {
+    if (cartDbIds.has(id)) continue;
+    const locked = await sql`
+      SELECT 1 FROM farm_inventories WHERE order_item_id = ${id} LIMIT 1
+    `;
+    if ((locked as unknown[]).length > 0) {
+      return {
+        success: false,
+        error:
+          "Tidak bisa menghapus baris yang sudah terhubung ke inventori hewan. Kembalikan item tersebut ke keranjang.",
+      };
+    }
+  }
+
+  const grandTotal = Math.max(0, d.subtotal - d.discount);
+  const remainingBalance = Math.max(0, grandTotal - d.dpPaid);
+  const companyName =
+    d.customerType === "B2B" ? (d.companyName?.trim() ? d.companyName.trim() : null) : null;
+  const email =
+    d.customerEmail && String(d.customerEmail).trim() !== ""
+      ? String(d.customerEmail).trim()
+      : null;
+  const lat =
+    typeof d.latitude === "number" && Number.isFinite(d.latitude) ? d.latitude : null;
+  const lng =
+    typeof d.longitude === "number" && Number.isFinite(d.longitude) ? d.longitude : null;
+
+  const syncParticipants = async (
+    orderItemId: number,
+    participants: { name: string; fatherName?: string | null }[]
+  ) => {
+    await sql`DELETE FROM order_participants WHERE order_item_id = ${orderItemId}`;
+    for (const p of participants) {
+      const nm = p.name?.trim();
+      if (!nm) continue;
+      await sql`
+        INSERT INTO order_participants (order_item_id, participant_name, father_name)
+        VALUES (${orderItemId}, ${nm}, ${p.fatherName ?? null})
+      `;
+    }
+  };
+
+  try {
+    await sql`
+      UPDATE orders SET
+        customer_type = ${d.customerType},
+        customer_name = ${d.customerName.trim()},
+        company_name = ${companyName},
+        customer_phone = ${d.customerPhone.trim()},
+        customer_email = ${email},
+        delivery_address = ${d.deliveryAddress?.trim() ? d.deliveryAddress.trim() : null},
+        latitude = ${lat},
+        longitude = ${lng},
+        subtotal = ${d.subtotal},
+        discount = ${d.discount},
+        grand_total = ${grandTotal},
+        dp_paid = ${d.dpPaid},
+        remaining_balance = ${remainingBalance},
+        status = ${d.status}
+      WHERE id = ${d.orderId}
+    `;
+
+    const savedIds: number[] = [];
+
+    for (const item of d.items) {
+      if (item.orderItemId) {
+        const upd = await sql`
+          UPDATE order_items SET
+            item_type = ${item.itemType},
+            catalog_offer_id = ${item.catalogOfferId},
+            service_id = ${item.serviceId},
+            item_name = ${item.itemName},
+            quantity = ${item.quantity},
+            unit_price = ${item.unitPrice},
+            total_price = ${item.totalPrice},
+            coa_code = ${item.coaCode}
+          WHERE id = ${item.orderItemId} AND order_id = ${d.orderId}
+          RETURNING id
+        `;
+        const rows = upd as { id: number }[];
+        if (rows.length === 0) {
+          return { success: false, error: "Salah satu baris pesanan tidak valid (bukan milik order ini)." };
+        }
+        const oid = Number(rows[0].id);
+        savedIds.push(oid);
+        await syncParticipants(oid, item.participants ?? []);
+      } else {
+        const ins = await sql`
+          INSERT INTO order_items (
+            order_id,
+            item_type,
+            catalog_offer_id,
+            service_id,
+            item_name,
+            quantity,
+            unit_price,
+            total_price,
+            coa_code
+          ) VALUES (
+            ${d.orderId},
+            ${item.itemType},
+            ${item.catalogOfferId},
+            ${item.serviceId},
+            ${item.itemName},
+            ${item.quantity},
+            ${item.unitPrice},
+            ${item.totalPrice},
+            ${item.coaCode}
+          )
+          RETURNING id
+        `;
+        const insRows = ins as { id: number }[];
+        if (insRows.length === 0) continue;
+        const oid = Number(insRows[0].id);
+        savedIds.push(oid);
+        await syncParticipants(oid, item.participants ?? []);
+      }
+    }
+
+    for (const { id } of existingItems) {
+      if (savedIds.includes(id)) continue;
+      await sql`DELETE FROM order_items WHERE id = ${id} AND order_id = ${d.orderId}`;
+    }
+
+    revalidatePath(`/orders/${d.orderId}`);
+    revalidatePath("/orders");
+    revalidatePath("/pos");
+    return { success: true, orderId: d.orderId };
+  } catch (e) {
+    console.error("updateOrderViaPosAction", e);
+    return { success: false, error: "Gagal menyimpan perubahan pesanan (POS)." };
   }
 }
 

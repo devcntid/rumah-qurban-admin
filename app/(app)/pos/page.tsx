@@ -3,28 +3,51 @@ import { listCatalogOffers } from "@/lib/db/queries/catalog";
 import { listServices } from "@/lib/db/queries/services";
 import { PosClient } from "./PosClient";
 import { listBranches } from "@/lib/db/queries/master";
+import { getOrderWithItems } from "@/lib/db/queries/orders";
 
-export default async function PosPage() {
+export default async function PosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string | string[] }>;
+}) {
   const session = await getSession();
-  const branchId = session?.branchId ?? 1; // Fallback to 1 for demo/safety
+  const defaultBranchId = session?.branchId ?? 1;
+
+  const sp = await searchParams;
+  const editRaw = sp.edit;
+  const editStr = Array.isArray(editRaw) ? editRaw[0] : editRaw;
+  const editId = editStr ? Number(editStr) : NaN;
+
+  const branchFilter = session?.role === "SUPER_ADMIN" ? null : session?.branchId ?? null;
+
+  let editBundle: Awaited<ReturnType<typeof getOrderWithItems>> = null;
+  let editLoadError: string | null = null;
+  if (Number.isFinite(editId)) {
+    const b = await getOrderWithItems(editId, branchFilter);
+    if (b) editBundle = b;
+    else editLoadError = "Pesanan tidak ditemukan atau Anda tidak punya akses ke cabang pesanan ini.";
+  }
+
+  const catalogBranchId = editBundle?.order.branchId ?? defaultBranchId;
 
   const [catalog, allServices, branches] = await Promise.all([
-    listCatalogOffers({ branchId, limit: 100, offset: 0 }),
+    listCatalogOffers({ branchId: catalogBranchId, limit: 100, offset: 0 }),
     listServices(),
     listBranches(),
   ]);
 
-  // Filter services relevant to this branch or global (branchId null)
   const services = allServices.filter(
-    (s) => s.branchId === branchId || s.branchId === null
+    (s) => s.branchId === catalogBranchId || s.branchId === null
   );
 
   return (
-    <PosClient 
-      branchId={branchId}
+    <PosClient
+      branchId={defaultBranchId}
       initialCatalog={catalog}
       initialServices={services}
       branches={branches}
+      editBundle={editBundle}
+      editLoadError={editLoadError}
     />
   );
 }

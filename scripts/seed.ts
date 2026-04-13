@@ -62,6 +62,9 @@ async function main() {
 
     const bandungId = branchIdByName("Bandung Raya");
     const jakartaId = branchIdByName("Jakarta Raya");
+    const brebesId = branchIdByName("Brebes");
+    const kupangId = branchIdByName("Kupang");
+    const bojonegoroId = branchIdByName("Bojonegoro");
     const farmAgroId = vendorIdByName("Farm Agrosurya");
 
     await sql`
@@ -408,6 +411,81 @@ async function main() {
           father_name = EXCLUDED.father_name
     `;
 
+    /** 10 pesanan Qurban Antar (5 B2B + 5 B2C) + 5 Qurban Berbagi — data demo idempoten. */
+    await sql`
+      INSERT INTO orders (
+        id, invoice_number, branch_id, sales_agent_id,
+        customer_type, customer_name, company_name, customer_phone, customer_email,
+        delivery_address, latitude, longitude, subtotal, discount, grand_total, dp_paid, remaining_balance, status, created_at
+      ) VALUES
+        (4, 'INV-QA-B2B-2026-01', ${bandungId}, NULL, 'B2B', 'Bpk. Rudi Hartono', 'PT Qurban Nusantara', '02155501001', 'dir@qndemo.test', NULL, NULL, NULL, 6200000.00, 0.00, 6200000.00, 3100000.00, 3100000.00, 'DP_PAID', '2026-06-01 09:00:00'),
+        (5, 'INV-QA-B2B-2026-02', ${bandungId}, NULL, 'B2B', 'Ibu Siska', 'CV Mitra Berkah Qurban', '02288801002', 'mitra@qbdemo.test', NULL, NULL, NULL, 4100000.00, 0.00, 4100000.00, 0.00, 4100000.00, 'FULL_PAID', '2026-06-02 10:00:00'),
+        (6, 'INV-QA-B2B-2026-03', ${bandungId}, NULL, 'B2B', 'Pak Joko', 'UD Maju Ternak Sejahtera', '02312301003', 'udmaju@demo.test', NULL, NULL, NULL, 7200000.00, 0.00, 7200000.00, 3600000.00, 3600000.00, 'DP_PAID', '2026-06-03 11:00:00'),
+        (7, 'INV-QA-B2B-2026-04', ${jakartaId}, NULL, 'B2B', 'Bpk. Leo', 'PT Berkah Abadi Sentosa', '02177701004', 'leo@bas.test', NULL, NULL, NULL, 4800000.00, 0.00, 4800000.00, 4800000.00, 0.00, 'FULL_PAID', '2026-06-04 08:30:00'),
+        (8, 'INV-QA-B2B-2026-05', ${jakartaId}, NULL, 'B2B', 'Ibu Dewi', 'Koperasi Qurban Sejahtera', '02166601005', 'koperasi@kq.test', NULL, NULL, NULL, 3100000.00, 0.00, 3100000.00, 0.00, 3100000.00, 'PENDING', '2026-06-05 14:00:00'),
+        (9, 'INV-QA-B2C-2026-01', ${bandungId}, NULL, 'B2C', 'Rina Wulandari', NULL, '081811110001', NULL, 'Jl. Cihampelas No. 100, Bandung', -6.89450000, 107.61040000, 3600000.00, 0.00, 3600000.00, 3600000.00, 0.00, 'FULL_PAID', '2026-06-06 09:00:00'),
+        (10, 'INV-QA-B2C-2026-02', ${bandungId}, NULL, 'B2C', 'Budi Prasetyo', NULL, '081822220002', NULL, 'Jl. Setiabudi No. 45, Bandung', -6.87600000, 107.59300000, 3150000.00, 0.00, 3150000.00, 1575000.00, 1575000.00, 'DP_PAID', '2026-06-07 10:00:00'),
+        (11, 'INV-QA-B2C-2026-03', ${bandungId}, NULL, 'B2C', 'Cindy Anggraini', NULL, '081833330003', NULL, 'Jl. Dago No. 12, Bandung', -6.88500000, 107.61800000, 4100000.00, 0.00, 4100000.00, 4100000.00, 0.00, 'FULL_PAID', '2026-06-08 11:00:00'),
+        (12, 'INV-QA-B2C-2026-04', ${jakartaId}, NULL, 'B2C', 'Eko Firmansyah', NULL, '081844440004', NULL, 'Jl. Fatmawati Raya No. 20, Jakarta', -6.26920000, 106.79980000, 4800000.00, 0.00, 4800000.00, 0.00, 4800000.00, 'PENDING', '2026-06-09 12:00:00'),
+        (13, 'INV-QA-B2C-2026-05', ${jakartaId}, NULL, 'B2C', 'Fitri Handayani', NULL, '081855550005', NULL, 'Jl. TB Simatupang No. 8, Jakarta', -6.30100000, 106.83500000, 3100000.00, 0.00, 3100000.00, 3100000.00, 0.00, 'FULL_PAID', '2026-06-10 13:00:00'),
+        (14, 'INV-QB-2026-01', ${kupangId}, NULL, 'B2C', 'Maya Kristina', NULL, '081866660014', NULL, NULL, NULL, NULL, 17000000.00, 0.00, 17000000.00, 17000000.00, 0.00, 'FULL_PAID', '2026-06-11 09:00:00'),
+        (15, 'INV-QB-2026-02', ${bojonegoroId}, NULL, 'B2C', 'Nanda Permadi', NULL, '081877770015', NULL, NULL, NULL, NULL, 1800000.00, 0.00, 1800000.00, 1800000.00, 0.00, 'FULL_PAID', '2026-06-12 10:00:00'),
+        (16, 'INV-QB-2026-03', ${brebesId}, NULL, 'B2C', 'Oki Ramadhan', NULL, '081888880016', NULL, NULL, NULL, NULL, 2500000.00, 0.00, 2500000.00, 1250000.00, 1250000.00, 'DP_PAID', '2026-06-13 11:00:00'),
+        (17, 'INV-QB-2026-04', ${kupangId}, NULL, 'B2B', 'Tim CSR', 'PT Telkom Indonesia Tbk', '02199901017', 'csr@telkom.test', NULL, NULL, NULL, 17000000.00, 0.00, 17000000.00, 8500000.00, 8500000.00, 'DP_PAID', '2026-06-14 08:00:00'),
+        (18, 'INV-QB-2026-05', ${brebesId}, NULL, 'B2C', 'Putri Lestari', NULL, '081899990018', NULL, NULL, NULL, NULL, 2500000.00, 0.00, 2500000.00, 2500000.00, 0.00, 'FULL_PAID', '2026-06-15 15:00:00')
+      ON CONFLICT (id) DO UPDATE
+      SET invoice_number = EXCLUDED.invoice_number,
+          branch_id = EXCLUDED.branch_id,
+          sales_agent_id = EXCLUDED.sales_agent_id,
+          customer_type = EXCLUDED.customer_type,
+          customer_name = EXCLUDED.customer_name,
+          company_name = EXCLUDED.company_name,
+          customer_phone = EXCLUDED.customer_phone,
+          customer_email = EXCLUDED.customer_email,
+          delivery_address = EXCLUDED.delivery_address,
+          latitude = EXCLUDED.latitude,
+          longitude = EXCLUDED.longitude,
+          subtotal = EXCLUDED.subtotal,
+          discount = EXCLUDED.discount,
+          grand_total = EXCLUDED.grand_total,
+          dp_paid = EXCLUDED.dp_paid,
+          remaining_balance = EXCLUDED.remaining_balance,
+          status = EXCLUDED.status,
+          created_at = EXCLUDED.created_at
+    `;
+
+    await sql`
+      INSERT INTO order_items (
+        id, order_id, item_type, catalog_offer_id, service_id, item_name, quantity, unit_price, total_price, coa_code
+      ) VALUES
+        (6, 4, 'ANIMAL', 5, NULL, 'Qurban Antar Domba Jantan Tanduk (Bandung)', 2, 3100000.00, 6200000.00, NULL),
+        (7, 5, 'ANIMAL', 6, NULL, 'Qurban Antar Domba Jantan Tanduk (Bandung)', 1, 4100000.00, 4100000.00, NULL),
+        (8, 6, 'ANIMAL', 7, NULL, 'Qurban Antar Domba Jantan Tanduk (Bandung)', 2, 3600000.00, 7200000.00, NULL),
+        (9, 7, 'ANIMAL', 8, NULL, 'Qurban Antar Domba Jantan Tanduk (Jakarta)', 1, 4800000.00, 4800000.00, NULL),
+        (10, 8, 'ANIMAL', 5, NULL, 'Qurban Antar Domba Jantan Tanduk (Jakarta)', 1, 3100000.00, 3100000.00, NULL),
+        (11, 9, 'ANIMAL', 6, NULL, 'Qurban Antar Domba Jantan Tanduk (Bandung)', 1, 3600000.00, 3600000.00, NULL),
+        (12, 10, 'ANIMAL', 5, NULL, 'Qurban Antar Domba Jantan Tanduk (Bandung)', 1, 3100000.00, 3100000.00, NULL),
+        (13, 10, 'SERVICE', NULL, 1, 'Ongkos Kirim Domba Area Bandung', 1, 50000.00, 50000.00, NULL),
+        (14, 11, 'ANIMAL', 7, NULL, 'Qurban Antar Domba Jantan Tanduk (Bandung)', 1, 4100000.00, 4100000.00, NULL),
+        (15, 12, 'ANIMAL', 8, NULL, 'Qurban Antar Domba Jantan Tanduk (Jakarta)', 1, 4800000.00, 4800000.00, NULL),
+        (16, 13, 'ANIMAL', 5, NULL, 'Qurban Antar Domba Jantan Tanduk (Jakarta)', 1, 3100000.00, 3100000.00, NULL),
+        (17, 14, 'ANIMAL', 115, NULL, 'Qurban Berbagi Sapi di Desa Oebufu Kupang', 1, 17000000.00, 17000000.00, NULL),
+        (18, 15, 'ANIMAL', 116, NULL, 'Qurban Berbagi Kambing Domba Bojonegoro', 1, 1800000.00, 1800000.00, NULL),
+        (19, 16, 'ANIMAL', 117, NULL, 'Qurban Berbagi Domba Brebes', 1, 2500000.00, 2500000.00, NULL),
+        (20, 17, 'ANIMAL', 115, NULL, 'Qurban Berbagi Sapi di Desa Oebufu Kupang', 1, 17000000.00, 17000000.00, NULL),
+        (21, 18, 'ANIMAL', 117, NULL, 'Qurban Berbagi Domba Brebes', 1, 2500000.00, 2500000.00, NULL)
+      ON CONFLICT (id) DO UPDATE
+      SET order_id = EXCLUDED.order_id,
+          item_type = EXCLUDED.item_type,
+          catalog_offer_id = EXCLUDED.catalog_offer_id,
+          service_id = EXCLUDED.service_id,
+          item_name = EXCLUDED.item_name,
+          quantity = EXCLUDED.quantity,
+          unit_price = EXCLUDED.unit_price,
+          total_price = EXCLUDED.total_price,
+          coa_code = EXCLUDED.coa_code
+    `;
+
     await sql`
       INSERT INTO farm_inventories (
         id, generated_id, farm_animal_id, eartag_id, animal_variant_id, branch_id, vendor_id, 
@@ -439,7 +517,95 @@ async function main() {
       ON CONFLICT (id) DO NOTHING;
     `;
 
+    /** 20 hewan demo tambahan: 10 teralokasi QA, 5 QB, 5 stok AVAILABLE. */
+    await sql`
+      INSERT INTO farm_inventories (
+        id, generated_id, farm_animal_id, eartag_id, animal_variant_id, branch_id, vendor_id,
+        entry_date, acquisition_type, initial_product_type, pen_id, pan_name,
+        purchase_price, initial_weight_source, price_per_kg, shipping_cost, total_hpp,
+        horn_type, initial_weight, initial_type, final_type, weight_actual,
+        photo_url, status, order_item_id, created_at
+      ) VALUES
+        (5, 'RQ26DEMO005', 'FA-D05', 'SEED-2026-0005', 6, ${bandungId}, ${farmAgroId}, '2026-02-01', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 3100000, 28, 85000, 0, 3185000, 'TANDUK', 28, 'TIPE F', 'TIPE F', 28.0, NULL, 'ALLOCATED', 6, '2026-02-01 10:00:00'),
+        (6, 'RQ26DEMO006', 'FA-D06', 'SEED-2026-0006', 6, ${bandungId}, ${farmAgroId}, '2026-02-01', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 3200000, 29, 85000, 0, 3285000, 'TANDUK', 29, 'TIPE F', 'TIPE F', 29.0, NULL, 'ALLOCATED', 7, '2026-02-01 10:00:00'),
+        (7, 'RQ26DEMO007', 'FA-D07', 'SEED-2026-0007', 7, ${bandungId}, ${farmAgroId}, '2026-02-01', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 3300000, 30, 85000, 0, 3385000, 'TANDUK', 30, 'TIPE F', 'TIPE F', 30.0, NULL, 'ALLOCATED', 8, '2026-02-01 10:00:00'),
+        (8, 'RQ26DEMO008', 'FA-D08', 'SEED-2026-0008', 8, ${jakartaId}, 2, '2026-02-02', 'MANDIRI', 'QURBAN ANTAR', 4, 'B', 3400000, 31, 80000, 0, 3480000, 'TANDUK', 31, 'TIPE F', 'TIPE F', 31.0, NULL, 'ALLOCATED', 9, '2026-02-02 10:00:00'),
+        (9, 'RQ26DEMO009', 'FA-D09', 'SEED-2026-0009', 8, ${jakartaId}, 2, '2026-02-02', 'MANDIRI', 'QURBAN ANTAR', 4, 'B', 3500000, 32, 80000, 0, 3580000, 'TANDUK', 32, 'TIPE F', 'TIPE F', 32.0, NULL, 'ALLOCATED', 10, '2026-02-02 10:00:00'),
+        (10, 'RQ26DEMO010', 'FA-D10', 'SEED-2026-0010', 6, ${bandungId}, ${farmAgroId}, '2026-02-03', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 3000000, 27, 85000, 0, 3085000, 'TANDUK', 27, 'TIPE F', 'TIPE F', 27.0, NULL, 'ALLOCATED', 11, '2026-02-03 10:00:00'),
+        (11, 'RQ26DEMO011', 'FA-D11', 'SEED-2026-0011', 6, ${bandungId}, ${farmAgroId}, '2026-02-03', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 3050000, 27.5, 85000, 0, 3135000, 'TANDUK', 27.5, 'TIPE F', 'TIPE F', 27.5, NULL, 'ALLOCATED', 12, '2026-02-03 10:00:00'),
+        (12, 'RQ26DEMO012', 'FA-D12', 'SEED-2026-0012', 7, ${bandungId}, ${farmAgroId}, '2026-02-04', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 3150000, 28.5, 85000, 0, 3235000, 'TANDUK', 28.5, 'TIPE F', 'TIPE F', 28.5, NULL, 'ALLOCATED', 14, '2026-02-04 10:00:00'),
+        (13, 'RQ26DEMO013', 'FA-D13', 'SEED-2026-0013', 8, ${jakartaId}, 2, '2026-02-04', 'MANDIRI', 'QURBAN ANTAR', 4, 'B', 3250000, 29.5, 80000, 0, 3330000, 'TANDUK', 29.5, 'TIPE F', 'TIPE F', 29.5, NULL, 'ALLOCATED', 15, '2026-02-04 10:00:00'),
+        (14, 'RQ26DEMO014', 'FA-D14', 'SEED-2026-0014', 8, ${jakartaId}, 2, '2026-02-05', 'MANDIRI', 'QURBAN ANTAR', 4, 'B', 3350000, 30.5, 80000, 0, 3430000, 'TANDUK', 30.5, 'TIPE F', 'TIPE F', 30.5, NULL, 'ALLOCATED', 16, '2026-02-05 10:00:00'),
+        (15, 'RQ26DEMO015', 'FA-QB15', 'SEED-2026-0015', 15, ${kupangId}, 2, '2026-02-10', 'BOOKING', 'QURBAN BERBAGI', NULL, NULL, 12000000, 250, 68000, 0, 12068000, NULL, 250, 'TIPE F', 'TIPE F', 250.0, NULL, 'ALLOCATED', 17, '2026-02-10 10:00:00'),
+        (16, 'RQ26DEMO016', 'FA-QB16', 'SEED-2026-0016', 16, ${bojonegoroId}, 2, '2026-02-10', 'BOOKING', 'QURBAN BERBAGI', NULL, NULL, 1200000, 32, 56250, 0, 1256250, 'POLL', 32, 'TIPE F', 'TIPE F', 32.0, NULL, 'ALLOCATED', 18, '2026-02-10 10:00:00'),
+        (17, 'RQ26DEMO017', 'FA-QB17', 'SEED-2026-0017', 16, ${brebesId}, 2, '2026-02-11', 'BOOKING', 'QURBAN BERBAGI', NULL, NULL, 1500000, 35, 71429, 0, 1571429, 'POLL', 35, 'TIPE F', 'TIPE F', 35.0, NULL, 'ALLOCATED', 19, '2026-02-11 10:00:00'),
+        (18, 'RQ26DEMO018', 'FA-QB18', 'SEED-2026-0018', 15, ${kupangId}, 2, '2026-02-11', 'BOOKING', 'QURBAN BERBAGI', NULL, NULL, 12100000, 251, 68000, 0, 12168000, NULL, 251, 'TIPE F', 'TIPE F', 251.0, NULL, 'ALLOCATED', 20, '2026-02-11 10:00:00'),
+        (19, 'RQ26DEMO019', 'FA-QB19', 'SEED-2026-0019', 16, ${brebesId}, 2, '2026-02-12', 'BOOKING', 'QURBAN BERBAGI', NULL, NULL, 1510000, 35.5, 71429, 0, 1581429, 'POLL', 35.5, 'TIPE F', 'TIPE F', 35.5, NULL, 'ALLOCATED', 21, '2026-02-12 10:00:00'),
+        (20, 'RQ26DEMO020', 'FA-D20', 'SEED-2026-0020', 6, ${bandungId}, ${farmAgroId}, '2026-02-15', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 2900000, 26, 85000, 0, 2985000, 'TANDUK', 26, 'TIPE F', 'TIPE F', 26.0, NULL, 'AVAILABLE', NULL, '2026-02-15 10:00:00'),
+        (21, 'RQ26DEMO021', 'FA-D21', 'SEED-2026-0021', 6, ${bandungId}, ${farmAgroId}, '2026-02-15', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 2910000, 26.2, 85000, 0, 2995000, 'TANDUK', 26.2, 'TIPE F', 'TIPE F', 26.2, NULL, 'AVAILABLE', NULL, '2026-02-15 10:00:00'),
+        (22, 'RQ26DEMO022', 'FA-D22', 'SEED-2026-0022', 7, ${bandungId}, ${farmAgroId}, '2026-02-16', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 2920000, 26.5, 85000, 0, 3005000, 'TANDUK', 26.5, 'TIPE F', 'TIPE F', 26.5, NULL, 'AVAILABLE', NULL, '2026-02-16 10:00:00'),
+        (23, 'RQ26DEMO023', 'FA-D23', 'SEED-2026-0023', 7, ${bandungId}, ${farmAgroId}, '2026-02-16', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 2930000, 26.8, 85000, 0, 3015000, 'TANDUK', 26.8, 'TIPE F', 'TIPE F', 26.8, NULL, 'AVAILABLE', NULL, '2026-02-16 10:00:00'),
+        (24, 'RQ26DEMO024', 'FA-D24', 'SEED-2026-0024', 5, ${bandungId}, ${farmAgroId}, '2026-02-17', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 2940000, 27.2, 85000, 0, 3025000, 'TANDUK', 27.2, 'TIPE F', 'TIPE F', 27.2, NULL, 'AVAILABLE', NULL, '2026-02-17 10:00:00')
+      ON CONFLICT (id) DO UPDATE
+      SET generated_id = EXCLUDED.generated_id,
+          farm_animal_id = EXCLUDED.farm_animal_id,
+          eartag_id = EXCLUDED.eartag_id,
+          animal_variant_id = EXCLUDED.animal_variant_id,
+          branch_id = EXCLUDED.branch_id,
+          vendor_id = EXCLUDED.vendor_id,
+          entry_date = EXCLUDED.entry_date,
+          acquisition_type = EXCLUDED.acquisition_type,
+          initial_product_type = EXCLUDED.initial_product_type,
+          pen_id = EXCLUDED.pen_id,
+          pan_name = EXCLUDED.pan_name,
+          purchase_price = EXCLUDED.purchase_price,
+          initial_weight_source = EXCLUDED.initial_weight_source,
+          price_per_kg = EXCLUDED.price_per_kg,
+          shipping_cost = EXCLUDED.shipping_cost,
+          total_hpp = EXCLUDED.total_hpp,
+          horn_type = EXCLUDED.horn_type,
+          initial_weight = EXCLUDED.initial_weight,
+          initial_type = EXCLUDED.initial_type,
+          final_type = EXCLUDED.final_type,
+          weight_actual = EXCLUDED.weight_actual,
+          photo_url = EXCLUDED.photo_url,
+          status = EXCLUDED.status,
+          order_item_id = EXCLUDED.order_item_id,
+          created_at = EXCLUDED.created_at
+    `;
 
+    await sql`
+      INSERT INTO logistics_trips (id, branch_id, vehicle_plate, driver_name, scheduled_date, status) VALUES
+        (1, ${bandungId}, 'D 1234 AB', 'Budi Santoso', '2026-05-19'::date, 'PREPARING'),
+        (2, ${jakartaId}, 'B 9999 XX', 'Siti Aminah', '2026-05-27'::date, 'ON_DELIVERY')
+      ON CONFLICT (id) DO UPDATE
+      SET branch_id = EXCLUDED.branch_id,
+          vehicle_plate = EXCLUDED.vehicle_plate,
+          driver_name = EXCLUDED.driver_name,
+          scheduled_date = EXCLUDED.scheduled_date,
+          status = EXCLUDED.status
+    `;
+
+    await sql`
+      INSERT INTO delivery_manifests (
+        id, trip_id, farm_inventory_id, destination_address, destination_lat, destination_lng, delivery_status
+      ) VALUES (
+        1,
+        1,
+        1,
+        'Jl. Dipatiukur No. 1, Bandung',
+        -6.89123000,
+        107.60351000,
+        'PENDING'::varchar(50)
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET trip_id = EXCLUDED.trip_id,
+          farm_inventory_id = EXCLUDED.farm_inventory_id,
+          destination_address = EXCLUDED.destination_address,
+          destination_lat = EXCLUDED.destination_lat,
+          destination_lng = EXCLUDED.destination_lng,
+          delivery_status = EXCLUDED.delivery_status
+    `;
 
     await sql`
       INSERT INTO animal_trackings (id, farm_inventory_id, milestone, description, location_lat, location_lng, media_url, logged_at)
@@ -538,6 +704,56 @@ async function main() {
           status = EXCLUDED.status,
           payload = EXCLUDED.payload,
           provider_response = EXCLUDED.provider_response
+    `;
+
+    // Id seed eksplisit → sequence BIGSERIAL tidak naik; sinkronkan agar INSERT aplikasi tidak bentrok pkey.
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('orders', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM orders LIMIT 1)
+          THEN (SELECT MAX(id) FROM orders) ELSE 1 END,
+        EXISTS (SELECT 1 FROM orders LIMIT 1)
+      )
+    `;
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('order_items', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM order_items LIMIT 1)
+          THEN (SELECT MAX(id) FROM order_items) ELSE 1 END,
+        EXISTS (SELECT 1 FROM order_items LIMIT 1)
+      )
+    `;
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('animal_trackings', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM animal_trackings LIMIT 1)
+          THEN (SELECT MAX(id) FROM animal_trackings) ELSE 1 END,
+        EXISTS (SELECT 1 FROM animal_trackings LIMIT 1)
+      )
+    `;
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('delivery_manifests', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM delivery_manifests LIMIT 1)
+          THEN (SELECT MAX(id) FROM delivery_manifests) ELSE 1 END,
+        EXISTS (SELECT 1 FROM delivery_manifests LIMIT 1)
+      )
+    `;
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('logistics_trips', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM logistics_trips LIMIT 1)
+          THEN (SELECT MAX(id) FROM logistics_trips) ELSE 1 END,
+        EXISTS (SELECT 1 FROM logistics_trips LIMIT 1)
+      )
+    `;
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('farm_inventories', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM farm_inventories LIMIT 1)
+          THEN (SELECT MAX(id) FROM farm_inventories) ELSE 1 END,
+        EXISTS (SELECT 1 FROM farm_inventories LIMIT 1)
+      )
     `;
 
     await sql`COMMIT`;

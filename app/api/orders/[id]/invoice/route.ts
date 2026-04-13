@@ -20,9 +20,8 @@ export async function GET(
     const { id } = await params;
     const orderId = parseInt(id);
     
-    // Since it's an admin panel, we might need a way to verify branch access
-    // For now, using the branch from session
-    const data = await getOrderWithItems(orderId, session.branchId);
+    const branchFilter = session.role === "SUPER_ADMIN" ? null : session.branchId;
+    const data = await getOrderWithItems(orderId, branchFilter);
 
     if (!data) {
       return new NextResponse("Order not found", { status: 404 });

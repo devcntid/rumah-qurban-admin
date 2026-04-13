@@ -169,6 +169,7 @@ export type OrderItemRow = {
   totalPrice: string;
   catalogOfferId: number | null;
   serviceId: number | null;
+  coaCode: string | null;
 };
 
 export type OrderParticipantRow = {
@@ -225,9 +226,15 @@ export async function getTransactionsByOrderId(orderId: number) {
   return rows as unknown as TransactionRow[];
 }
 
-export async function getOrderWithItems(orderId: number, branchId: number) {
+/**
+ * @param branchFilter - Isolasi multi-tenant: wajib `branchId` untuk admin cabang.
+ *   Gunakan `null` hanya untuk SUPER_ADMIN agar pesanan semua cabang (dan `branch_id` NULL) bisa dibuka.
+ */
+export async function getOrderWithItems(orderId: number, branchFilter: number | null) {
   const sql = getDb();
-  const orderRows = await sql`
+  const orderRows =
+    branchFilter === null
+      ? await sql`
     SELECT
       id,
       invoice_number as "invoiceNumber",
@@ -248,7 +255,31 @@ export async function getOrderWithItems(orderId: number, branchId: number) {
       status,
       created_at as "createdAt"
     FROM orders
-    WHERE id = ${orderId} AND branch_id = ${branchId}
+    WHERE id = ${orderId}
+    LIMIT 1
+  `
+      : await sql`
+    SELECT
+      id,
+      invoice_number as "invoiceNumber",
+      branch_id as "branchId",
+      customer_type as "customerType",
+      customer_name as "customerName",
+      company_name as "companyName",
+      customer_phone as "customerPhone",
+      customer_email as "customerEmail",
+      delivery_address as "deliveryAddress",
+      latitude,
+      longitude,
+      subtotal::text as subtotal,
+      discount::text as discount,
+      grand_total::text as "grandTotal",
+      dp_paid::text as "dpPaid",
+      remaining_balance::text as "remainingBalance",
+      status,
+      created_at as "createdAt"
+    FROM orders
+    WHERE id = ${orderId} AND branch_id = ${branchFilter}
     LIMIT 1
   `;
   const order = (orderRows as unknown as OrderDetail[])[0];
@@ -263,7 +294,8 @@ export async function getOrderWithItems(orderId: number, branchId: number) {
       unit_price::text as "unitPrice",
       total_price::text as "totalPrice",
       catalog_offer_id as "catalogOfferId",
-      service_id as "serviceId"
+      service_id as "serviceId",
+      coa_code as "coaCode"
     FROM order_items
     WHERE order_id = ${orderId}
     ORDER BY id ASC

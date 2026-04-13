@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { 
   ShoppingCart, Building2, User, Phone, MapPin, Plus, Trash2, 
   Wallet, ChevronRight, ListChecks, Search, Tag, Info, Receipt,
@@ -12,12 +14,16 @@ import {
 import dynamic from "next/dynamic";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
-import { createOrderAction } from "@/lib/actions/orders";
+import { createOrderAction, updateOrderViaPosAction } from "@/lib/actions/orders";
 import { searchCatalogAction, getCatalogFiltersAction } from "@/lib/actions/catalog";
 import type { CatalogOfferRow } from "@/lib/db/queries/catalog";
 import type { ServiceRow } from "@/lib/db/queries/services";
 import type { BranchRow } from "@/lib/db/queries/master";
-import { useEffect } from "react";
+import type {
+  OrderDetail,
+  OrderItemRow,
+  OrderParticipantRow,
+} from "@/lib/db/queries/orders";
 
 const MapPicker = dynamic(() => import("@/components/ui/MapPicker").then(mod => mod.MapPicker), { 
   ssr: false,
@@ -42,7 +48,7 @@ const OrderItemSchema = z.object({
   ).default([]),
 });
 
-type CartItem = z.infer<typeof OrderItemSchema>;
+type CartItem = z.infer<typeof OrderItemSchema> & { orderItemId?: number };
 
 const PosFormSchema = z.object({
   customerType: z.enum(["B2B", "B2C"]),
@@ -62,12 +68,22 @@ export function PosClient({
   initialCatalog,
   initialServices,
   branches,
+  editBundle,
+  editLoadError,
 }: {
   branchId: number;
   initialCatalog: CatalogOfferRow[];
   initialServices: ServiceRow[];
   branches: BranchRow[];
+  editBundle: {
+    order: OrderDetail;
+    items: OrderItemRow[];
+    participants: OrderParticipantRow[];
+  } | null;
+  editLoadError?: string | null;
 }) {
+  const router = useRouter();
+  const editInitRef = useRef<number | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [isServiceOpen, setIsServiceOpen] = useState(false);
@@ -91,7 +107,7 @@ export function PosClient({
   const [productOptions, setProductOptions] = useState<{id: number, name: string, code: string}[]>([]);
   const [gradeOptions, setGradeOptions] = useState<string[]>([]);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<z.infer<typeof PosFormSchema>>({
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<z.infer<typeof PosFormSchema>>({
     resolver: zodResolver(PosFormSchema),
     defaultValues: {
       customerType: "B2C",
@@ -99,6 +115,77 @@ export function PosClient({
       dpPaid: 0,
     }
   });
+
+  useEffect(() => {
+    if (editLoadError) setError(editLoadError);
+  }, [editLoadError]);
+
+  useEffect(() => {
+    if (!editBundle) {
+      editInitRef.current = null;
+      return;
+    }
+    const oid = editBundle.order.id;
+    if (editInitRef.current === oid) return;
+    editInitRef.current = oid;
+
+    const { order, items, participants } = editBundle;
+    setCart(
+      items.map((it) => {
+        const parts = participants
+          .filter((p) => Number(p.orderItemId) === Number(it.id))
+          .map((p) => ({
+            name: p.participantName,
+            fatherName: p.fatherName ?? "",
+          }));
+        const defaultParts =
+          it.itemType === "ANIMAL"
+            ? parts.length > 0
+              ? parts
+              : [{ name: "", fatherName: "" }]
+            : [];
+        return {
+          id: `oi-${it.id}`,
+          orderItemId: it.id,
+          itemType: it.itemType,
+          catalogOfferId: it.catalogOfferId,
+          serviceId: it.serviceId,
+          itemName: it.itemName,
+          quantity: it.quantity,
+          unitPrice: Number(it.unitPrice),
+          totalPrice: Number(it.totalPrice),
+          coaCode: it.coaCode ?? null,
+          participants: defaultParts,
+        };
+      })
+    );
+
+    const latRaw = order.latitude;
+    const lngRaw = order.longitude;
+    const lat =
+      latRaw != null && String(latRaw) !== ""
+        ? Number(latRaw)
+        : undefined;
+    const lng =
+      lngRaw != null && String(lngRaw) !== ""
+        ? Number(lngRaw)
+        : undefined;
+
+    reset({
+      customerType: order.customerType === "B2B" ? "B2B" : "B2C",
+      customerName: order.customerName,
+      companyName: order.companyName ?? "",
+      customerPhone: order.customerPhone ?? "",
+      customerEmail: order.customerEmail ?? "",
+      deliveryAddress: order.deliveryAddress ?? "",
+      latitude: lat != null && Number.isFinite(lat) ? lat : undefined,
+      longitude: lng != null && Number.isFinite(lng) ? lng : undefined,
+      discount: Number(order.discount),
+      dpPaid: Number(order.dpPaid),
+    });
+    setFilterBranchId(order.branchId ?? defaultBranchId);
+    setCatalogData(initialCatalog);
+  }, [editBundle, reset, defaultBranchId, initialCatalog]);
 
   const customerType = watch("customerType");
   const discountInput = watch("discount");
@@ -109,7 +196,8 @@ export function PosClient({
   const grandTotal = Math.max(0, subtotal - (Number(discountInput) || 0));
   const remainingBalance = Math.max(0, grandTotal - (Number(dpPaidInput) || 0));
 
-  const currentBranch = branches.find(b => b.id === defaultBranchId)?.name ?? "Cabang";
+  const displayBranchId = editBundle?.order.branchId ?? defaultBranchId;
+  const currentBranch = branches.find((b) => b.id === displayBranchId)?.name ?? "Cabang";
 
   // Fetch Filters on Mount
   useEffect(() => {
@@ -198,7 +286,50 @@ export function PosClient({
     setError(null);
     setIsSubmitting(true);
 
+    const editingId = editBundle?.order.id;
+    const payStatus =
+      dpPaidInput >= grandTotal ? "FULL_PAID" : dpPaidInput > 0 ? "DP_PAID" : "PENDING";
+    const lat =
+      typeof values.latitude === "number" && Number.isFinite(values.latitude)
+        ? values.latitude
+        : null;
+    const lng =
+      typeof values.longitude === "number" && Number.isFinite(values.longitude)
+        ? values.longitude
+        : null;
+
     try {
+      if (editingId != null) {
+        const res = await updateOrderViaPosAction({
+          orderId: editingId,
+          customerType: values.customerType,
+          customerName: values.customerName,
+          companyName: values.companyName?.trim() ? values.companyName.trim() : null,
+          customerPhone: values.customerPhone,
+          customerEmail: values.customerEmail?.trim() ? values.customerEmail.trim() : null,
+          deliveryAddress: values.deliveryAddress?.trim() ? values.deliveryAddress.trim() : null,
+          latitude: lat,
+          longitude: lng,
+          discount: values.discount ?? 0,
+          dpPaid: values.dpPaid ?? 0,
+          subtotal,
+          status: payStatus,
+          items: cart.map(({ id: _cid, ...rest }) => ({
+            ...rest,
+            participants: rest.participants ?? [],
+          })),
+        });
+        setIsSubmitting(false);
+        if (res.success) {
+          toast.success("Pesanan diperbarui.");
+          router.push(`/orders/${res.orderId}`);
+        } else {
+          setError(res.error);
+          toast.error(res.error);
+        }
+        return;
+      }
+
       const res = await createOrderAction({
         ...values,
         branchId: defaultBranchId,
@@ -207,21 +338,20 @@ export function PosClient({
         grandTotal,
         dpPaid: values.dpPaid ?? 0,
         remainingBalance,
-        status: dpPaidInput >= grandTotal ? "FULL_PAID" : dpPaidInput > 0 ? "DP_PAID" : "PENDING",
-        items: cart.map(({ id, ...rest }) => rest), // Remove client-side id
+        status: payStatus,
+        items: cart.map(({ id: _cid, orderItemId: _oid, ...rest }) => rest),
       });
-      // Reset form on success
       setCart([]);
       setValue("discount", 0);
       setValue("dpPaid", 0);
       setIsSubmitting(false);
-      
-      // Open Invoice in New Tab
-      if (res.success && (res as any).orderId) {
-        window.open(`/api/orders/${(res as any).orderId}/invoice`, "_blank");
+
+      if (res.success && (res as { orderId?: number }).orderId) {
+        window.open(`/api/orders/${(res as { orderId: number }).orderId}/invoice`, "_blank");
       }
-    } catch (e: any) {
-      setError(e.message || "Terjadi kesalahan saat menyimpan pesanan");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Terjadi kesalahan saat menyimpan pesanan";
+      setError(msg);
       setIsSubmitting(false);
     }
   };
@@ -232,9 +362,17 @@ export function PosClient({
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center">
-        <div>
+        <div className="space-y-1">
           <h2 className="text-2xl font-bold text-slate-800">POS / Invoicing</h2>
-          <p className="text-slate-500 text-sm">Cabang: <span className="font-bold text-slate-700">{currentBranch}</span></p>
+          <p className="text-slate-500 text-sm">
+            Cabang: <span className="font-bold text-slate-700">{currentBranch}</span>
+          </p>
+          {editBundle && (
+            <p className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-2xl leading-relaxed">
+              Mengedit {editBundle.order.invoiceNumber}. Baris yang sudah terhubung ke inventori
+              hewan tidak bisa dihapus dari keranjang.
+            </p>
+          )}
         </div>
       </div>
 
@@ -532,12 +670,18 @@ export function PosClient({
                  disabled={isSubmitting}
                  className={`w-full py-4 rounded-xl font-black text-lg shadow-lg flex items-center justify-center gap-3 transition-all transform active:scale-95 ${isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-[#102a43] text-white hover:bg-slate-800 hover:-translate-y-1 shadow-blue-900/10"}`}
                >
-                 {isSubmitting ? "Memproses..." : "Terbitkan Invoice"}
+                 {isSubmitting
+                   ? "Memproses..."
+                   : editBundle
+                     ? "Simpan perubahan"
+                     : "Terbitkan Invoice"}
                  {!isSubmitting && <ChevronRight size={20}/>}
                </button>
 
                <div className="pt-2 text-[10px] text-slate-400 text-center leading-relaxed">
-                 Invoice akan otomatis ter-generate dan data akan tereservasi ke tim kandang & logistik.
+                 {editBundle
+                   ? "Setelah simpan Anda akan diarahkan ke halaman detail pesanan."
+                   : "Invoice akan otomatis ter-generate dan data akan tereservasi ke tim kandang & logistik."}
                </div>
             </div>
           </div>
