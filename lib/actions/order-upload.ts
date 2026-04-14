@@ -9,6 +9,7 @@ import {
   getCatalogOfferLookupMap,
   getPaymentMethodLookupMap 
 } from "@/lib/db/queries/order-upload";
+import { getOrCreateCustomer } from "@/lib/db/queries/customers";
 
 type ExcelRow = {
   Invoice?: string;
@@ -192,6 +193,25 @@ export async function uploadOrdersAction(fileBuffer: ArrayBuffer) {
             ${d.dpPaid}, 'SUCCESS', ${d.orderDate}::timestamp
           )
         `;
+      }
+      
+      // Create/update customer
+      if (d.customerPhone) {
+        try {
+          const customerId = await getOrCreateCustomer({
+            name: d.customerName,
+            phone: d.customerPhone,
+            email: d.customerEmail,
+            customerType: 'B2C',
+            companyName: null,
+            orderTotal: grandTotal,
+            orderDate: d.orderDate,
+          });
+          
+          await sql`UPDATE orders SET customer_id = ${customerId} WHERE id = ${orderId}`;
+        } catch (error) {
+          console.error(`Error creating customer for row ${result.rowIndex}:`, error);
+        }
       }
       
       inserted.push(invoiceNumber);

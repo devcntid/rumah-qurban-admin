@@ -9,7 +9,8 @@
     "lint": "eslint",
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
-    "import:catalog": "tsx scripts/import-catalog.ts"
+    "import:catalog": "tsx scripts/import-catalog.ts",
+    "migrate:customers": "tsx scripts/migrate-existing-customers.ts"
   },
   "dependencies": {
     "@fontsource/source-sans-pro": "^5.2.5",

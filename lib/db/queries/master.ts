@@ -231,6 +231,33 @@ export async function deleteAnimalVariant(id: number) {
   await sql`DELETE FROM animal_variants WHERE id = ${id}`;
 }
 
+/** Pasangan varian–cabang dari katalog, jasa, dan inventaris farm (untuk filter master). */
+export type AnimalVariantBranchLinkRow = {
+  variantId: number;
+  branchId: number;
+};
+
+export async function listAnimalVariantBranchLinks() {
+  const sql = getDb();
+  const rows = await sql`
+    SELECT DISTINCT animal_variant_id AS "variantId", branch_id AS "branchId"
+    FROM (
+      SELECT animal_variant_id, branch_id
+      FROM catalog_offers
+      WHERE branch_id IS NOT NULL AND animal_variant_id IS NOT NULL
+      UNION
+      SELECT animal_variant_id, branch_id
+      FROM services
+      WHERE branch_id IS NOT NULL AND animal_variant_id IS NOT NULL
+      UNION
+      SELECT animal_variant_id, branch_id
+      FROM farm_inventories
+      WHERE branch_id IS NOT NULL AND animal_variant_id IS NOT NULL
+    ) t
+  `;
+  return rows as unknown as AnimalVariantBranchLinkRow[];
+}
+
 export type PaymentMethodRow = {
   id: number;
   code: string;

@@ -498,23 +498,12 @@ export function PosClient({
                   />
                 </div>
               </div>
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Alamat Pengiriman</label>
-                <div className="relative">
-                  <MapPin size={16} className="absolute left-3.5 top-3 text-slate-400"/>
-                  <textarea 
-                    {...register("deliveryAddress")}
-                    className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-20 transition-all font-medium"
-                    placeholder="Masukkan alamat lengkap tujuan pengiriman"
-                  />
-                </div>
-              </div>
               <div className="md:col-span-2 space-y-4 pt-2">
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
                   <div className="flex items-center justify-between mb-4">
                      <div className="flex items-center gap-2">
                         <MapIcon size={18} className="text-blue-600"/>
-                        <span className="text-sm font-bold text-slate-800 uppercase tracking-tight">Titik Lokasi Pengiriman (Opsional)</span>
+                        <span className="text-sm font-bold text-slate-800 uppercase tracking-tight">Titik Lokasi & Alamat Pengiriman (Opsional)</span>
                      </div>
                      <span className="text-[10px] bg-blue-100 text-blue-700 font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">Map Picker</span>
                   </div>
@@ -525,28 +514,43 @@ export function PosClient({
                     onLocationSelect={(lat, lng, addr) => {
                       setValue("latitude", lat);
                       setValue("longitude", lng);
-                      if (addr && !watch("deliveryAddress")) {
+                      if (addr) {
                         setValue("deliveryAddress", addr);
                       }
                     }}
                   />
 
-                  <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="mt-4 space-y-3">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Latitude</label>
-                      <input 
-                        type="number" step="any"
-                        {...register("latitude", { valueAsNumber: true })}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono"
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                        <MapPin size={12}/> Alamat Lengkap Pengiriman
+                      </label>
+                      <textarea 
+                        {...register("deliveryAddress")}
+                        className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-20 transition-all font-medium bg-white"
+                        placeholder="Alamat akan terisi otomatis saat mencari lokasi, atau isi manual"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Longitude</label>
-                      <input 
-                        type="number" step="any"
-                        {...register("longitude", { valueAsNumber: true })}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono"
-                      />
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Latitude</label>
+                        <input 
+                          type="number" step="any"
+                          {...register("latitude", { valueAsNumber: true })}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono"
+                          readOnly
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Longitude</label>
+                        <input 
+                          type="number" step="any"
+                          {...register("longitude", { valueAsNumber: true })}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono"
+                          readOnly
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

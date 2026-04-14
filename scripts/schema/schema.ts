@@ -169,6 +169,29 @@ export const salesTargets = pgTable(
   ]
 );
 
+export const customers = pgTable(
+  "customers",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    phoneNormalized: varchar("phone_normalized", { length: 20 }).notNull().unique(),
+    name: varchar("name", { length: 150 }).notNull(),
+    email: varchar("email", { length: 100 }),
+    customerType: varchar("customer_type", { length: 10 }).default("B2C"),
+    companyName: varchar("company_name", { length: 150 }),
+    totalOrders: integer("total_orders").notNull().default(0),
+    totalSpent: numeric("total_spent", { precision: 15, scale: 2 }).notNull().default("0"),
+    firstOrderDate: timestamp("first_order_date"),
+    lastOrderDate: timestamp("last_order_date"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("customers_phone_normalized_uniq").on(t.phoneNormalized),
+    index("idx_customers_last_order").on(t.lastOrderDate),
+    index("idx_customers_total_spent").on(t.totalSpent),
+  ]
+);
+
 export const orders = pgTable(
   "orders",
   {
@@ -178,6 +201,7 @@ export const orders = pgTable(
     salesAgentId: bigint("sales_agent_id", { mode: "number" }).references(
       () => salesAgents.id
     ),
+    customerId: bigint("customer_id", { mode: "number" }).references(() => customers.id),
     customerType: varchar("customer_type", { length: 10 }).default("B2C"),
     customerName: varchar("customer_name", { length: 150 }).notNull(),
     companyName: varchar("company_name", { length: 150 }),
@@ -194,7 +218,10 @@ export const orders = pgTable(
     status: varchar("status", { length: 50 }).default("PENDING"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (t) => [index("idx_orders_branch_id").on(t.branchId)]
+  (t) => [
+    index("idx_orders_branch_id").on(t.branchId),
+    index("idx_orders_customer_id").on(t.customerId),
+  ]
 );
 
 export const orderItems = pgTable(

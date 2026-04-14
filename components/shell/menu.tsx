@@ -9,6 +9,7 @@ import {
   Tags,
   TrendingUp,
   Truck,
+  Users,
   Wallet,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ export type MenuItem = {
     | "targets"
     | "pos"
     | "orders"
+    | "customers"
     | "finance"
     | "farm"
     | "logistics"
@@ -53,6 +55,12 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Manajemen Pesanan",
     href: "/orders",
     icon: <ClipboardList size={20} />,
+  },
+  {
+    id: "customers",
+    label: "Database Customers",
+    href: "/customers",
+    icon: <Users size={20} />,
   },
   {
     id: "finance",

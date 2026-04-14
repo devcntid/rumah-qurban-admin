@@ -23,6 +23,9 @@ export async function POST(req: Request) {
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const category = typeof body?.category === "string" ? body.category.trim() : "";
   const coaCode = typeof body?.coaCode === "string" ? body.coaCode.trim() : null;
+  const bankName = typeof body?.bankName === "string" ? body.bankName.trim() : null;
+  const accountNumber = typeof body?.accountNumber === "string" ? body.accountNumber.trim() : null;
+  const accountHolderName = typeof body?.accountHolderName === "string" ? body.accountHolderName.trim() : null;
   const isActive = typeof body?.isActive === "boolean" ? body.isActive : true;
 
   if (!code || !name || !category) {
@@ -35,6 +38,9 @@ export async function POST(req: Request) {
     name,
     category,
     coaCode: coaCode || null,
+    bankName: bankName || null,
+    accountNumber: accountNumber || null,
+    accountHolderName: accountHolderName || null,
     isActive,
   });
   return NextResponse.json({ ok: true });

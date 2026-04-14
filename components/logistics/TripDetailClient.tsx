@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Package, Pencil, Plus, Trash2, User } from "lucide-react";
+import { MapPin, Package, Pencil, Plus, Trash2, User, Eye, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import type { DeliveryManifestRow, EligibleFarmAnimalRow, LogisticsTripRow } from "@/lib/db/queries/logistics";
 import { markManifestDeliveredAction, deleteDeliveryManifestAction } from "@/lib/actions/logistics";
@@ -11,6 +11,7 @@ import { FiltersBar, type FilterField } from "@/components/ui/FiltersBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { manifestStatusStyle, tripStatusStyle } from "./logisticsShared";
 import AddManifestModal from "./AddManifestModal";
+import { BulkTrackingModal } from "./BulkTrackingModal";
 
 export default function TripDetailClient({
   trip,
@@ -32,6 +33,7 @@ export default function TripDetailClient({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [addOpen, setAddOpen] = useState(false);
+  const [bulkTrackingOpen, setBulkTrackingOpen] = useState(false);
 
   const forTrip =
     trip.branchId == null ? [] : eligibleAnimals.filter((a) => a.branchId === trip.branchId);
@@ -107,6 +109,15 @@ export default function TripDetailClient({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {manifests.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setBulkTrackingOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+            >
+              <ListChecks size={14} /> Bulk Tracking
+            </button>
+          )}
           <Link
             href={`/logistics/trips/${trip.id}/edit`}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
@@ -200,6 +211,15 @@ export default function TripDetailClient({
                       </td>
                       <td className="px-6 py-4 align-top text-right">
                         <div className="flex justify-end flex-wrap gap-2">
+                          {m.farmInventoryId && (
+                            <Link
+                              href={`/farm/${m.farmInventoryId}`}
+                              className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[10px] font-black text-indigo-700 hover:bg-indigo-100"
+                              title="Lihat tracking hewan"
+                            >
+                              <Eye size={14} />
+                            </Link>
+                          )}
                           <Link
                             href={`/logistics/trips/${trip.id}/manifests/${m.id}/edit`}
                             className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-700 hover:bg-slate-50"
@@ -237,6 +257,22 @@ export default function TripDetailClient({
           </>
         )}
       </div>
+
+      {/* Bulk Tracking Modal */}
+      <BulkTrackingModal
+        open={bulkTrackingOpen}
+        onClose={() => setBulkTrackingOpen(false)}
+        manifestAnimals={manifests.map((m) => ({
+          id: m.id,
+          farmInventoryId: m.farmInventoryId ?? 0,
+          eartagId: m.eartagId,
+          generatedId: m.generatedId,
+        })).filter((a) => a.farmInventoryId > 0)}
+        onAdded={() => {
+          router.refresh();
+          toast.success("Tracking berhasil ditambahkan");
+        }}
+      />
     </div>
   );
 }

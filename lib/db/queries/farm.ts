@@ -333,3 +333,80 @@ export async function getAllocatedAnimalsForOrderItem(orderItemId: number) {
   `) as unknown as (FarmInventoryRow & { allocationId: number, vendorName: string | null })[];
 }
 
+export async function getFarmInventoryById(id: number) {
+  const sql = getDb();
+  const rows = (await sql`
+    SELECT 
+      fi.*,
+      fi.generated_id as "generatedId",
+      fi.farm_animal_id as "farmAnimalId",
+      fi.eartag_id as "eartagId",
+      fi.animal_variant_id as "animalVariantId",
+      fi.branch_id as "branchId",
+      fi.vendor_id as "vendorId",
+      fi.entry_date as "entryDate",
+      fi.acquisition_type as "acquisitionType",
+      fi.initial_product_type as "initialProductType",
+      fi.pen_id as "penId",
+      fi.pan_name as "panName",
+      fi.purchase_price as "purchasePrice",
+      fi.initial_weight_source as "initialWeightSource",
+      fi.price_per_kg as "pricePerKg",
+      fi.shipping_cost as "shippingCost",
+      fi.total_hpp as "totalHpp",
+      fi.horn_type as "hornType",
+      fi.initial_weight as "initialWeight",
+      fi.initial_type as "initialType",
+      fi.final_type as "finalType",
+      fi.weight_actual as "weightActual",
+      fi.photo_url as "photoUrl",
+      fi.order_item_id as "orderItemId",
+      fi.exit_date as "exitDate",
+      fi.created_at as "createdAt",
+      v.name as "vendorName",
+      fp.name as "penName",
+      av.species,
+      av.class_grade as "classGrade",
+      av.weight_range as "weightRange",
+      b.name as "branchName"
+    FROM farm_inventories fi
+    LEFT JOIN vendors v ON fi.vendor_id = v.id
+    LEFT JOIN farm_pens fp ON fi.pen_id = fp.id
+    LEFT JOIN animal_variants av ON fi.animal_variant_id = av.id
+    LEFT JOIN branches b ON fi.branch_id = b.id
+    WHERE fi.id = ${id}
+    LIMIT 1
+  `) as unknown as (FarmInventoryRow & { branchName: string | null })[];
+  return rows.length > 0 ? rows[0] : null;
+}
+
+export type AnimalTrackingRow = {
+  id: number;
+  farmInventoryId: number;
+  milestone: string;
+  description: string | null;
+  locationLat: string | null;
+  locationLng: string | null;
+  mediaUrl: string | null;
+  loggedAt: string;
+};
+
+export async function getAnimalTrackingsByFarmInventoryId(farmInventoryId: number) {
+  const sql = getDb();
+  const rows = await sql`
+    SELECT 
+      id,
+      farm_inventory_id as "farmInventoryId",
+      milestone,
+      description,
+      location_lat as "locationLat",
+      location_lng as "locationLng",
+      media_url as "mediaUrl",
+      logged_at as "loggedAt"
+    FROM animal_trackings
+    WHERE farm_inventory_id = ${farmInventoryId}
+    ORDER BY logged_at DESC
+  `;
+  return rows as unknown as AnimalTrackingRow[];
+}
+

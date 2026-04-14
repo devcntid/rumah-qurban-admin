@@ -1,57 +1,88 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
-import { uploadCatalogImageAction } from "@/lib/actions/catalog";
+import { Upload, X, Loader2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface ImageUploadProps {
   value?: string | null;
   onChange: (url: string | null) => void;
   label?: string;
+  accept?: string;
+  maxSize?: number; // in MB
+  disabled?: boolean;
 }
 
-export function ImageUpload({ value, onChange, label }: ImageUploadProps) {
+export function ImageUpload({
+  value,
+  onChange,
+  label = "Upload Gambar",
+  accept = "image/*",
+  maxSize = 5,
+  disabled = false,
+}: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(value || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Basic client-side validation
-    if (!file.type.startsWith("image/")) {
-      toast.error("Format file harus gambar");
+    // Validate file size
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > maxSize) {
+      toast.error(`Ukuran file maksimal ${maxSize}MB`);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Ukuran file maksimal 5MB");
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar");
       return;
     }
 
     setIsUploading(true);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload gagal");
+      }
+
+      const data = await response.json();
       
-      const res = await uploadCatalogImageAction(formData);
-      if (res.success && res.url) {
-        onChange(res.url);
-        toast.success("Gambar berhasil diunggah");
+      if (data.url) {
+        setPreviewUrl(data.url);
+        onChange(data.url);
+        toast.success("Gambar berhasil diupload");
       } else {
-        toast.error(res.error || "Gagal mengunggah gambar");
+        throw new Error("URL tidak ditemukan");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Terjadi kesalahan sistem saat mengunggah");
+      toast.error("Gagal mengupload gambar");
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
-  const removeImage = () => {
+  const handleRemove = () => {
+    setPreviewUrl(null);
     onChange(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -61,51 +92,75 @@ export function ImageUpload({ value, onChange, label }: ImageUploadProps) {
           {label}
         </label>
       )}
-      
-      <div className="relative group">
-        {value ? (
-          <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm">
-            <img 
-              src={value} 
-              alt="Preview" 
+
+      {previewUrl ? (
+        <div className="relative group">
+          <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-50">
+            <img
+              src={previewUrl}
+              alt="Preview"
               className="w-full h-full object-cover"
             />
-            <button
-              onClick={removeImage}
-              className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-              type="button"
-            >
-              <X size={14} />
-            </button>
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.open(previewUrl, "_blank")}
+                className="p-2 bg-white rounded-lg hover:bg-slate-100 transition-all"
+                title="Lihat ukuran penuh"
+              >
+                <ImageIcon size={20} className="text-slate-700" />
+              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  className="p-2 bg-red-500 rounded-lg hover:bg-red-600 transition-all"
+                  title="Hapus gambar"
+                >
+                  <X size={20} className="text-white" />
+                </button>
+              )}
+            </div>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-full aspect-video flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/50 transition-all text-slate-400 hover:text-blue-500"
-          >
-            {isUploading ? (
-              <Loader2 className="animate-spin" size={24} />
-            ) : (
-              <>
-                <div className="p-3 bg-slate-100 rounded-full group-hover:bg-blue-100 transition-colors">
-                  <ImageIcon size={24} />
-                </div>
-                <div className="text-xs font-bold">Klik untuk unggah foto</div>
-                <div className="text-[10px] opacity-60">JPG, PNG maks 5MB</div>
-              </>
-            )}
-          </button>
-        )}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          accept="image/*" 
-          onChange={handleFileChange}
-        />
-      </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => !disabled && !isUploading && fileInputRef.current?.click()}
+          className={`relative w-full h-48 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center gap-3 transition-all ${
+            disabled || isUploading
+              ? "opacity-50 cursor-not-allowed"
+              : "hover:border-indigo-400 hover:bg-indigo-50/30 cursor-pointer"
+          }`}
+        >
+          {isUploading ? (
+            <>
+              <Loader2 size={40} className="animate-spin text-indigo-600" />
+              <p className="text-sm font-bold text-indigo-600">Mengupload...</p>
+            </>
+          ) : (
+            <>
+              <Upload size={40} className="text-slate-400" />
+              <div className="text-center">
+                <p className="text-sm font-bold text-slate-700">
+                  Klik untuk upload gambar
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {accept} • Max {maxSize}MB
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={accept}
+        onChange={handleFileChange}
+        className="hidden"
+        disabled={disabled || isUploading}
+      />
     </div>
   );
 }

@@ -180,6 +180,60 @@ export async function deleteLogisticsTripAction(tripId: number) {
   return { success: true as const };
 }
 
+export async function bulkAddTrackingToManifestAnimalsAction(input: {
+  farmInventoryIds: number[];
+  milestone: string;
+  description?: string;
+  locationLat?: string;
+  locationLng?: string;
+  mediaUrl?: string;
+}) {
+  const session = await getSession();
+  if (!session) return { success: false as const, error: "Sesi tidak valid." };
+
+  const { farmInventoryIds, milestone, description, locationLat, locationLng, mediaUrl } = input;
+  
+  if (!farmInventoryIds || farmInventoryIds.length === 0) {
+    return { success: false as const, error: "Pilih minimal satu hewan." };
+  }
+  
+  if (!milestone || milestone.trim().length === 0) {
+    return { success: false as const, error: "Milestone wajib diisi." };
+  }
+  
+  const trimmedMilestone = milestone.trim().slice(0, 50);
+  const trimmedDescription = description?.trim() || null;
+  
+  const sql = getDb();
+  
+  try {
+    for (const farmInventoryId of farmInventoryIds) {
+      await sql`
+        INSERT INTO animal_trackings (
+          farm_inventory_id, milestone, description, location_lat, location_lng, media_url, logged_at
+        )
+        VALUES (
+          ${farmInventoryId},
+          ${trimmedMilestone},
+          ${trimmedDescription},
+          ${locationLat ?? null},
+          ${locationLng ?? null},
+          ${mediaUrl ?? null},
+          NOW()
+        )
+      `;
+    }
+    
+    revalidatePath("/logistics");
+    revalidatePath("/farm");
+    
+    return { success: true as const, count: farmInventoryIds.length };
+  } catch (e) {
+    console.error("Bulk Add Tracking Error:", e);
+    return { success: false as const, error: "Gagal menambahkan tracking secara massal." };
+  }
+}
+
 export async function addFarmInventoryToTripAction(tripId: number, farmInventoryId: number) {
   const session = await getSession();
   if (!session) return { success: false as const, error: "Sesi tidak valid." };

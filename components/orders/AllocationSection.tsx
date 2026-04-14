@@ -8,11 +8,13 @@ import {
   Search, 
   Loader2,
   Tag,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { allocateAnimalAction, deallocateAnimalAction, bulkAllocateAction } from "@/lib/actions/allocations";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export function AllocationSection({
   orderItemId,
@@ -178,6 +180,16 @@ export function AllocationSection({
                   {a.vendorName || "—"}
                 </p>
               </div>
+            </div>
+            
+            {/* View Tracking Link */}
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <Link 
+                href={`/farm/${a.id}`}
+                className="flex items-center justify-center gap-1.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg border border-indigo-100 hover:border-indigo-200 transition-all active:scale-95"
+              >
+                <Eye size={12}/> Lihat Detail & Tracking
+              </Link>
             </div>
           </div>
         ))}

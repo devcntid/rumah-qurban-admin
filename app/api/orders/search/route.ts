@@ -4,34 +4,66 @@ import { getDb } from "@/lib/db/client";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get("q");
-    if (!q) return NextResponse.json([]);
+    const q = searchParams.get("q") || "";
+    const branch = searchParams.get("branch") || "";
+    const status = searchParams.get("status") || "";
+    const dateFrom = searchParams.get("dateFrom") || "";
+    const dateTo = searchParams.get("dateTo") || "";
 
     const sql = getDb();
-    const s = `%${q}%`;
-    
-    // Search orders and include items
+
+    // Build filters
+    const qPattern = `%${q}%`;
+    const branchPattern = `%${branch}%`;
+    /** PG tetap mem-parse semua parameter; `''::date` error — pakai placeholder aman bila filter off */
+    const dateFromBound = dateFrom === "" ? "1970-01-01" : dateFrom;
+    const dateToBound = dateTo === "" ? "2099-12-31" : dateTo;
+
+    // Query with all filters applied dynamically
     const orders = await sql`
       SELECT 
         o.id, 
         o.invoice_number as "invoiceNumber", 
         o.customer_name as "customerName",
+        o.status,
         b.name as "branchName"
       FROM orders o
       JOIN branches b ON b.id = o.branch_id
-      WHERE o.invoice_number ILIKE ${s} OR o.customer_name ILIKE ${s}
+      WHERE 
+        (${q === ""} OR o.invoice_number ILIKE ${qPattern} OR o.customer_name ILIKE ${qPattern})
+        AND (${branch === ""} OR b.name ILIKE ${branchPattern})
+        AND (${status === ""} OR o.status = ${status})
+        AND (${dateFrom === ""} OR o.created_at >= ${dateFromBound}::date)
+        AND (${dateTo === ""} OR o.created_at <= ${dateToBound}::date + INTERVAL '1 day')
       ORDER BY o.created_at DESC
-      LIMIT 10
+      LIMIT 20
     `;
 
-    // Fetch items for each order
+    // Fetch items for each order with allocation info
     const results = await Promise.all((orders as any[]).map(async (o: any) => {
       const items = await sql`
-        SELECT id, item_name as "itemName", item_type as "itemType", quantity
-        FROM order_items
-        WHERE order_id = ${o.id} AND catalog_offer_id IS NOT NULL
+        SELECT 
+          oi.id, 
+          oi.item_name as "itemName", 
+          oi.item_type as "itemType", 
+          oi.quantity,
+          COUNT(ia.id) as "allocationCount"
+        FROM order_items oi
+        LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id
+        WHERE oi.order_id = ${o.id} AND oi.catalog_offer_id IS NOT NULL
+        GROUP BY oi.id, oi.item_name, oi.item_type, oi.quantity
       `;
-      return { ...o, items };
+      
+      const hasMatches = (items as any[]).some((it: any) => Number(it.allocationCount) > 0);
+      
+      return { 
+        ...o, 
+        items: (items as any[]).map((it: any) => ({
+          ...it,
+          allocationCount: Number(it.allocationCount)
+        })),
+        hasMatches 
+      };
     }));
 
     return NextResponse.json(results);

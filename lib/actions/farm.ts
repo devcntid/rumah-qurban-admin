@@ -109,3 +109,144 @@ export async function patchEartagAction(id: number, eartagId: string) {
     return { success: false, error: error.message || "Gagal memperbarui Tag ID" };
   }
 }
+
+// Animal Tracking Actions
+import { getDb } from "@/lib/db/client";
+
+const AnimalTrackingSchema = z.object({
+  farmInventoryId: z.number(),
+  milestone: z.string().min(1, "Milestone wajib diisi").max(50, "Milestone maksimal 50 karakter"),
+  description: z.string().optional().nullable(),
+  locationLat: z.string().optional().nullable(),
+  locationLng: z.string().optional().nullable(),
+  mediaUrl: z.string().optional().nullable(),
+});
+
+export async function addAnimalTrackingAction(data: any) {
+  const result = AnimalTrackingSchema.safeParse(data);
+  
+  if (!result.success) {
+    const fieldErrors: Record<string, string[]> = result.error.flatten().fieldErrors;
+    return { 
+      success: false, 
+      error: "Validasi gagal", 
+      fieldErrors 
+    };
+  }
+
+  const { farmInventoryId, milestone, description, locationLat, locationLng, mediaUrl } = result.data;
+  
+  try {
+    const sql = getDb();
+    await sql`
+      INSERT INTO animal_trackings (
+        farm_inventory_id, milestone, description, location_lat, location_lng, media_url, logged_at
+      )
+      VALUES (
+        ${farmInventoryId},
+        ${milestone},
+        ${description ?? null},
+        ${locationLat ?? null},
+        ${locationLng ?? null},
+        ${mediaUrl ?? null},
+        NOW()
+      )
+    `;
+    
+    revalidatePath("/farm");
+    revalidatePath(`/farm/${farmInventoryId}`);
+    revalidatePath("/orders/[id]", "page");
+    revalidatePath("/logistics");
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Add Tracking Error:", error);
+    return { success: false, error: error.message || "Gagal menambah tracking" };
+  }
+}
+
+const UpdateTrackingSchema = z.object({
+  milestone: z.string().min(1, "Milestone wajib diisi").max(50, "Milestone maksimal 50 karakter"),
+  description: z.string().optional().nullable(),
+  locationLat: z.string().optional().nullable(),
+  locationLng: z.string().optional().nullable(),
+  mediaUrl: z.string().optional().nullable(),
+});
+
+export async function updateAnimalTrackingAction(trackingId: number, data: any) {
+  const result = UpdateTrackingSchema.safeParse(data);
+  
+  if (!result.success) {
+    const fieldErrors: Record<string, string[]> = result.error.flatten().fieldErrors;
+    return { 
+      success: false, 
+      error: "Validasi gagal", 
+      fieldErrors 
+    };
+  }
+
+  const { milestone, description, locationLat, locationLng, mediaUrl } = result.data;
+  
+  try {
+    const sql = getDb();
+    
+    // Get farm_inventory_id for revalidation
+    const tracking = (await sql`
+      SELECT farm_inventory_id FROM animal_trackings WHERE id = ${trackingId}
+    `) as { farm_inventory_id: number }[];
+    
+    if (tracking.length === 0) {
+      return { success: false, error: "Tracking tidak ditemukan" };
+    }
+    
+    await sql`
+      UPDATE animal_trackings
+      SET 
+        milestone = ${milestone},
+        description = ${description ?? null},
+        location_lat = ${locationLat ?? null},
+        location_lng = ${locationLng ?? null},
+        media_url = ${mediaUrl ?? null}
+      WHERE id = ${trackingId}
+    `;
+    
+    const farmInventoryId = tracking[0].farm_inventory_id;
+    revalidatePath("/farm");
+    revalidatePath(`/farm/${farmInventoryId}`);
+    revalidatePath("/orders/[id]", "page");
+    revalidatePath("/logistics");
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update Tracking Error:", error);
+    return { success: false, error: error.message || "Gagal memperbarui tracking" };
+  }
+}
+
+export async function deleteAnimalTrackingAction(trackingId: number) {
+  try {
+    const sql = getDb();
+    
+    // Get farm_inventory_id for revalidation
+    const tracking = (await sql`
+      SELECT farm_inventory_id FROM animal_trackings WHERE id = ${trackingId}
+    `) as { farm_inventory_id: number }[];
+    
+    if (tracking.length === 0) {
+      return { success: false, error: "Tracking tidak ditemukan" };
+    }
+    
+    await sql`DELETE FROM animal_trackings WHERE id = ${trackingId}`;
+    
+    const farmInventoryId = tracking[0].farm_inventory_id;
+    revalidatePath("/farm");
+    revalidatePath(`/farm/${farmInventoryId}`);
+    revalidatePath("/orders/[id]", "page");
+    revalidatePath("/logistics");
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Tracking Error:", error);
+    return { success: false, error: error.message || "Gagal menghapus tracking" };
+  }
+}

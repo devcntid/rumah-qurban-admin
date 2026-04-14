@@ -8,6 +8,7 @@ import {
   updateOrderFormSchema,
   type UpdateOrderFormValues,
 } from "@/lib/validations/order-edit";
+import { getOrCreateCustomer } from "@/lib/db/queries/customers";
 
 const OrderItemSchema = z.object({
   itemType: z.string(),
@@ -147,6 +148,7 @@ export async function createOrderAction(data: z.infer<typeof CreateOrderSchema>)
     }
     
     // 4. Record Initial Transaction if DP/Full paid
+    // 4. Record Initial Transaction if DP/Full paid
     if (data.dpPaid > 0) {
       const txType = data.dpPaid >= data.grandTotal ? "FULL_PAYMENT" : "DOWN_PAYMENT";
       await sql`
@@ -162,6 +164,25 @@ export async function createOrderAction(data: z.infer<typeof CreateOrderSchema>)
           'SUCCESS'
         )
       `;
+    }
+
+    // 5. Create/Update Customer
+    if (data.customerPhone) {
+      try {
+        const customerId = await getOrCreateCustomer({
+          name: data.customerName,
+          phone: data.customerPhone,
+          email: data.customerEmail,
+          customerType: data.customerType,
+          companyName: data.companyName,
+          orderTotal: data.grandTotal,
+          orderDate: new Date(),
+        });
+        
+        await sql`UPDATE orders SET customer_id = ${customerId} WHERE id = ${orderId}`;
+      } catch (error) {
+        console.error("Error creating/updating customer:", error);
+      }
     }
 
     revalidatePath("/orders");

@@ -1,4 +1,5 @@
 import {
+  listAnimalVariantBranchLinks,
   listAnimalVariants,
   listBranches,
   listPaymentMethods,
@@ -13,7 +14,10 @@ export default async function MasterPage() {
   const vendors = await listVendors();
   const payments = await listPaymentMethods();
   const salesAgents = await listSalesAgents();
-  const animalVariants = await listAnimalVariants();
+  const [animalVariants, variantBranchLinks] = await Promise.all([
+    listAnimalVariants(),
+    listAnimalVariantBranchLinks(),
+  ]);
   const services = await listServices();
 
   return (
@@ -29,6 +33,7 @@ export default async function MasterPage() {
         payments={payments}
         salesAgents={salesAgents}
         animalVariants={animalVariants}
+        variantBranchLinks={variantBranchLinks}
         services={services}
       />
     </div>

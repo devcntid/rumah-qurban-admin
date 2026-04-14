@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { TemplateModal } from "./TemplateModal";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 import { 
   Plus, 
   Layers, 
@@ -15,8 +16,10 @@ import {
   Loader2,
   Box,
   MapPin,
-  CheckCircle2
+  CheckCircle2,
+  Eye
 } from "lucide-react";
+import Link from "next/link";
 import { 
   saveInventoryAction, 
   bulkSaveInventoryAction, 
@@ -613,6 +616,8 @@ export default function FarmClient({
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                           checked={selectedIds.includes(item.id)}
                           onChange={() => handleSelectItem(item.id)}
+                          disabled={item.status === 'ALLOCATED' || item.orderItemId}
+                          title={item.status === 'ALLOCATED' || item.orderItemId ? 'Hewan sudah ter-match dengan order' : 'Pilih hewan'}
                         />
                       </td>
                       <td className="px-4 py-3 text-center text-slate-400 font-mono text-xs">
@@ -637,13 +642,20 @@ export default function FarmClient({
                       </td>
                       <td className="px-4 py-3 text-xs font-medium text-slate-600">{item.vendorName || "—"}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border tracking-tight ${
-                          item.status === 'AVAILABLE' ? 'bg-green-50 text-green-700 border-green-200' : 
-                          item.status === 'ALLOCATED' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                          'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {item.status}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border tracking-tight ${
+                            item.status === 'AVAILABLE' ? 'bg-green-50 text-green-700 border-green-200' : 
+                            item.status === 'ALLOCATED' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                            'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {item.status}
+                          </span>
+                          {(item.status === 'ALLOCATED' || item.orderItemId) && (
+                            <span className="text-[8px] font-black px-2 py-0.5 bg-indigo-100 text-indigo-700 border border-indigo-300 rounded-full uppercase tracking-tight flex items-center gap-0.5">
+                              <CheckCircle2 size={8} /> Matched
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-600 font-medium whitespace-nowrap">
                         {item.entryDate ? new Date(item.entryDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '—'}
@@ -680,10 +692,13 @@ export default function FarmClient({
                       </td>
                       <td className="px-4 py-3 text-right sticky right-0 bg-white group-hover:bg-slate-50 transition-colors border-l border-slate-100">
                         <div className="flex justify-end gap-2 text-slate-300 group-hover:text-slate-400 transition-colors">
-                          <button onClick={() => handleOpenModal(item)} className="hover:text-amber-600 transition-all hover:scale-110">
+                          <Link href={`/farm/${item.id}`} className="hover:text-indigo-600 transition-all hover:scale-110" title="Lihat Detail & Tracking">
+                            <Eye size={15} />
+                          </Link>
+                          <button onClick={() => handleOpenModal(item)} className="hover:text-amber-600 transition-all hover:scale-110" title="Edit">
                             <Pencil size={15} />
                           </button>
-                          <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 transition-all hover:scale-110">
+                          <button onClick={() => handleDelete(item.id)} className="hover:text-red-500 transition-all hover:scale-110" title="Hapus">
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -958,9 +973,17 @@ export default function FarmClient({
              </div>
              <div className="space-y-4">
                 <h4 className="font-black text-[10px] text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-1">Media & Referensi</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="text" className="w-full border-slate-300 rounded-lg p-2 text-xs border" value={formData.photoUrl || ""} onChange={e => setFormData({...formData, photoUrl: e.target.value})} placeholder="Photo URL" />
-                  <input type="number" className="w-full border-slate-300 rounded-lg p-2 text-xs border" value={formData.orderItemId || ""} onChange={e => setFormData({...formData, orderItemId: e.target.value})} placeholder="Order Item ID" />
+                <div className="space-y-3">
+                  <ImageUpload
+                    label="Photo Hewan"
+                    value={formData.photoUrl || ""}
+                    onChange={(url) => setFormData({...formData, photoUrl: url || ""})}
+                    maxSize={5}
+                  />
+                  <div>
+                    <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-wide">Order Item ID (Read Only)</label>
+                    <input type="number" className="w-full bg-slate-100 border-slate-300 rounded-lg p-2 text-xs border" value={formData.orderItemId || ""} onChange={e => setFormData({...formData, orderItemId: e.target.value})} placeholder="Order Item ID" readOnly />
+                  </div>
                 </div>
              </div>
           </div>
