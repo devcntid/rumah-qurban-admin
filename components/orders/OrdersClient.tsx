@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { 
   ShoppingCart, 
@@ -12,7 +12,8 @@ import {
   Plus,
   Package,
   Trash2,
-  Loader2
+  Loader2,
+  Upload
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import { FiltersBar, FilterField } from "@/components/ui/FiltersBar";
@@ -21,6 +22,7 @@ import { OrderListRow } from "@/lib/db/queries/orders";
 import { deleteOrderAction } from "@/lib/actions/orders";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import UploadOrdersModal from "@/components/orders/UploadOrdersModal";
 
 function formatIDR(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -56,6 +58,7 @@ export default function OrdersClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const handleDelete = async (id: number, invoice: string) => {
     if (!window.confirm(`Hapus pesanan ${invoice}? Tindakan ini tidak dapat dibatalkan.`)) return;
@@ -136,6 +139,12 @@ export default function OrdersClient({
             className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-emerald-700 transition-all"
           >
             <Download size={14} /> Export Excel
+          </button>
+          <button 
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-1.5 bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-purple-700 transition-all"
+          >
+            <Upload size={14} /> Upload Orders
           </button>
           <Link 
             href="/pos"
@@ -260,6 +269,10 @@ export default function OrdersClient({
           <Pagination page={page} pageSize={pageSize} totalItems={totalCount} />
         </div>
       </div>
+
+      {showUploadModal && (
+        <UploadOrdersModal onClose={() => setShowUploadModal(false)} />
+      )}
     </div>
   );
 }
