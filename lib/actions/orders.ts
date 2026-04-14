@@ -292,6 +292,70 @@ const UpdateViaPosSchema = z.object({
   items: z.array(ViaPosItemSchema).min(1),
 });
 
+/** Server Actions / RSC kadang mengirim angka sebagai string — normalkan sebelum Zod. */
+function normalizeUpdateViaPosInput(input: unknown): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return input;
+  const o = { ...(input as Record<string, unknown>) };
+
+  const coerceTop = (key: string, nullIfEmpty = false) => {
+    const v = o[key];
+    if (v === null || v === undefined) return;
+    if (v === "") {
+      if (nullIfEmpty) o[key] = null;
+      return;
+    }
+    if (typeof v === "number" && Number.isFinite(v)) return;
+    const n = Number(v);
+    if (Number.isFinite(n)) o[key] = n;
+    else if (nullIfEmpty) o[key] = null;
+  };
+
+  coerceTop("orderId", false);
+  coerceTop("discount", false);
+  coerceTop("dpPaid", false);
+  coerceTop("subtotal", false);
+  coerceTop("latitude", true);
+  coerceTop("longitude", true);
+
+  if (Array.isArray(o.items)) {
+    o.items = o.items.map((rawItem) => {
+      if (!rawItem || typeof rawItem !== "object") return rawItem;
+      const it = { ...(rawItem as Record<string, unknown>) };
+
+      const vOid = it.orderItemId;
+      if (vOid === "" || vOid === null || vOid === undefined) {
+        delete it.orderItemId;
+      } else {
+        const n = Number(vOid);
+        if (Number.isFinite(n) && n > 0) it.orderItemId = Math.trunc(n);
+        else delete it.orderItemId;
+      }
+
+      for (const key of ["catalogOfferId", "serviceId"] as const) {
+        const v = it[key];
+        if (v === "" || v === null || v === undefined) {
+          it[key] = null;
+          continue;
+        }
+        if (typeof v === "number" && Number.isFinite(v)) continue;
+        const n = Number(v);
+        it[key] = Number.isFinite(n) ? Math.trunc(n) : null;
+      }
+
+      for (const key of ["quantity", "unitPrice", "totalPrice"] as const) {
+        const v = it[key];
+        if (v === null || v === undefined) continue;
+        const n = Number(v);
+        if (Number.isFinite(n)) it[key] = key === "quantity" ? Math.trunc(n) : n;
+      }
+
+      return it;
+    });
+  }
+
+  return o;
+}
+
 export async function updateOrderViaPosAction(
   input: unknown
 ): Promise<{ success: true; orderId: number } | { success: false; error: string }> {
@@ -303,7 +367,7 @@ export async function updateOrderViaPosAction(
     return { success: false, error: "Anda tidak punya izin mengubah pesanan." };
   }
 
-  const parsed = UpdateViaPosSchema.safeParse(input);
+  const parsed = UpdateViaPosSchema.safeParse(normalizeUpdateViaPosInput(input));
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? "Data tidak valid";
     return { success: false, error: msg };
@@ -327,12 +391,31 @@ export async function updateOrderViaPosAction(
   }
 
   const existingItems = (await sql`
-    SELECT id FROM order_items WHERE order_id = ${d.orderId}
-  `) as { id: number }[];
-  const existingIds = new Set(existingItems.map((r) => r.id));
-  const cartDbIds = new Set(
-    d.items.map((i) => i.orderItemId).filter((x): x is number => typeof x === "number")
+    SELECT id FROM order_items WHERE order_id = ${d.orderId} ORDER BY id ASC
+  `) as { id: string | number }[];
+  const existingSortedIds = [...existingItems.map((r) => Number(r.id))].sort((a, b) => a - b);
+
+  /** Jika id baris tidak ikut di payload (BigInt/serialisasi), samakan urutan dengan DB. */
+  let workItems = d.items.map((it) => ({ ...it }));
+  const anyMissingOrderItemId = workItems.some(
+    (it) =>
+      it.orderItemId == null ||
+      typeof it.orderItemId !== "number" ||
+      !Number.isFinite(it.orderItemId) ||
+      it.orderItemId <= 0
   );
+  if (anyMissingOrderItemId && existingSortedIds.length === workItems.length) {
+    workItems = workItems.map((it, idx) => ({
+      ...it,
+      orderItemId: existingSortedIds[idx],
+    }));
+  }
+
+  const existingIds = new Set(existingItems.map((r) => Number(r.id)));
+  const cartDbIds = new Set(
+    workItems.map((i) => i.orderItemId).filter((x): x is number => typeof x === "number" && x > 0)
+  );
+
   for (const id of existingIds) {
     if (cartDbIds.has(id)) continue;
     const locked = await sql`
@@ -397,7 +480,7 @@ export async function updateOrderViaPosAction(
 
     const savedIds: number[] = [];
 
-    for (const item of d.items) {
+    for (const item of workItems) {
       if (item.orderItemId) {
         const upd = await sql`
           UPDATE order_items SET
@@ -452,7 +535,8 @@ export async function updateOrderViaPosAction(
       }
     }
 
-    for (const { id } of existingItems) {
+    for (const row of existingItems) {
+      const id = Number(row.id);
       if (savedIds.includes(id)) continue;
       await sql`DELETE FROM order_items WHERE id = ${id} AND order_id = ${d.orderId}`;
     }

@@ -6,6 +6,7 @@ import {
   ShoppingCart, 
   Eye, 
   Receipt, 
+  Pencil,
   Search, 
   Download, 
   Plus,
@@ -44,12 +45,14 @@ export default function OrdersClient({
   branches,
   page,
   pageSize,
+  showPosEditOrder = false,
 }: {
   initialData: OrderListRow[];
   totalCount: number;
   branches: { id: number; name: string }[];
   page: number;
   pageSize: number;
+  showPosEditOrder?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -214,6 +217,15 @@ export default function OrdersClient({
                       >
                         <Receipt size={14} />
                       </a>
+                      {showPosEditOrder && (
+                        <Link
+                          href={`/pos?edit=${o.id}`}
+                          className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1.5 rounded-xl text-[10px] font-black shadow-sm hover:bg-amber-100 hover:border-amber-300 transition-all hover:scale-105"
+                          title="Edit di POS"
+                        >
+                          <Pencil size={14} />
+                        </Link>
+                      )}
                       <Link
                         href={`/orders/${o.id}`}
                         className="inline-flex items-center gap-2 bg-white border border-slate-200 text-[#102a43] px-3 py-1.5 rounded-xl text-[10px] font-black shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all hover:scale-105"

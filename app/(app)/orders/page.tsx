@@ -1,10 +1,15 @@
 import { getDb } from "@/lib/db/client";
+import { getSession } from "@/lib/auth/session";
 import { listOrders, countOrders } from "@/lib/db/queries/orders";
 import OrdersClient from "../../../components/orders/OrdersClient";
 
 export default async function OrdersPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const session = await getSession();
+  const showPosEditOrder =
+    session?.role === "SUPER_ADMIN" || session?.role === "ADMIN_CABANG";
+
   const searchParams = await props.searchParams;
   
   const branchId = searchParams.branchId ? Number(searchParams.branchId) : undefined;
@@ -48,6 +53,7 @@ export default async function OrdersPage(props: {
         branches={branches as any}
         page={page}
         pageSize={pageSize}
+        showPosEditOrder={showPosEditOrder}
       />
     </div>
   );

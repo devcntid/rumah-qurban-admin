@@ -50,6 +50,17 @@ const OrderItemSchema = z.object({
 
 type CartItem = z.infer<typeof OrderItemSchema> & { orderItemId?: number };
 
+/** Server Actions hanya boleh menerima struktur JSON murni (tanpa undefined / NaN / field tak terduga). */
+function toServerActionJson<T>(value: T): T {
+  return JSON.parse(
+    JSON.stringify(value, (_key, v) => {
+      if (typeof v === "bigint") return Number(v);
+      if (typeof v === "number" && !Number.isFinite(v)) return null;
+      return v;
+    })
+  ) as T;
+}
+
 const PosFormSchema = z.object({
   customerType: z.enum(["B2B", "B2C"]),
   customerName: z.string().min(1, "Nama harus diisi"),
@@ -146,7 +157,7 @@ export function PosClient({
             : [];
         return {
           id: `oi-${it.id}`,
-          orderItemId: it.id,
+          orderItemId: Number(it.id),
           itemType: it.itemType,
           catalogOfferId: it.catalogOfferId,
           serviceId: it.serviceId,
@@ -300,7 +311,58 @@ export function PosClient({
 
     try {
       if (editingId != null) {
-        const res = await updateOrderViaPosAction({
+        const itemsPayload = cart.map((row) => {
+          const participants = (row.participants ?? []).map((p) => ({
+            name: String(p.name ?? ""),
+            fatherName:
+              p.fatherName != null && String(p.fatherName).trim() !== ""
+                ? String(p.fatherName)
+                : null,
+          }));
+          const line: {
+            orderItemId?: number;
+            itemType: string;
+            catalogOfferId: number | null;
+            serviceId: number | null;
+            itemName: string;
+            quantity: number;
+            unitPrice: number;
+            totalPrice: number;
+            coaCode: string | null;
+            participants: { name: string; fatherName: string | null }[];
+          } = {
+            itemType: String(row.itemType),
+            catalogOfferId:
+              row.catalogOfferId != null && Number.isFinite(Number(row.catalogOfferId))
+                ? Number(row.catalogOfferId)
+                : null,
+            serviceId:
+              row.serviceId != null && Number.isFinite(Number(row.serviceId))
+                ? Number(row.serviceId)
+                : null,
+            itemName: String(row.itemName),
+            quantity: Math.max(1, Math.floor(Number(row.quantity)) || 1),
+            unitPrice: Number(row.unitPrice),
+            totalPrice: Number(row.totalPrice),
+            coaCode: row.coaCode != null ? String(row.coaCode) : null,
+            participants,
+          };
+          const rawOid = row.orderItemId as unknown;
+          const oid =
+            typeof rawOid === "bigint"
+              ? Number(rawOid)
+              : typeof rawOid === "number"
+                ? rawOid
+                : typeof rawOid === "string" && rawOid.trim() !== ""
+                  ? Number(rawOid)
+                  : NaN;
+          if (Number.isFinite(oid) && oid > 0) {
+            line.orderItemId = Math.trunc(oid);
+          }
+          return line;
+        });
+
+        const payload = {
           orderId: editingId,
           customerType: values.customerType,
           customerName: values.customerName,
@@ -310,15 +372,14 @@ export function PosClient({
           deliveryAddress: values.deliveryAddress?.trim() ? values.deliveryAddress.trim() : null,
           latitude: lat,
           longitude: lng,
-          discount: values.discount ?? 0,
-          dpPaid: values.dpPaid ?? 0,
-          subtotal,
+          discount: Number.isFinite(values.discount) ? Number(values.discount) : 0,
+          dpPaid: Number.isFinite(values.dpPaid) ? Number(values.dpPaid) : 0,
+          subtotal: Number.isFinite(subtotal) ? subtotal : 0,
           status: payStatus,
-          items: cart.map(({ id: _cid, ...rest }) => ({
-            ...rest,
-            participants: rest.participants ?? [],
-          })),
-        });
+          items: itemsPayload,
+        };
+
+        const res = await updateOrderViaPosAction(toServerActionJson(payload));
         setIsSubmitting(false);
         if (res.success) {
           toast.success("Pesanan diperbarui.");
