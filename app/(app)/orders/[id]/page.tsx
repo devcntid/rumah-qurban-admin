@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { OrderTransactionsSection } from "./OrderTransactionsSection";
 import { AllocationSection } from "@/components/orders/AllocationSection";
+import { SlaughterSection } from "./SlaughterSection";
 
 function formatIDR(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -236,6 +237,8 @@ export default async function OrderDetailPage({
           </table>
         </div>
       </div>
+      {/* Slaughter Section */}
+      <SlaughterSection orderId={order.id} />
     </div>
   );
 }

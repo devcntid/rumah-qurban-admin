@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { neon } from "@neondatabase/serverless";
+import bcrypt from "bcryptjs";
 
 dotenv.config({ path: ".env.local" });
 
@@ -682,10 +683,84 @@ async function main() {
     await sql`
       INSERT INTO notif_templates (id, name, template_text, created_at)
       VALUES
-        (1, 'DP_RECEIVED', 'Halo {{name}}, DP untuk {{invoice}} telah kami terima.', '2026-05-20 10:01:00')
+        (1, 'DP_RECEIVED', 'Halo {{customer_name}}, DP untuk {{invoice_number}} telah kami terima.', '2026-05-20 10:01:00'),
+        (2, 'VERIFIKASI_NAMA', 'Assalamualaikum Sobat Qurban
+
+Kami ingin memverifikasi data peserta qurban, apakah sudah sesuai atau belum. Mohon untuk dicek kembali data peserta dan nomor telepon untuk pengiriman sertifikat dan laporan qurban. Berikut datanya:
+
+Nama Peserta  : {{customer_name}}
+No Telpon   : {{customer_phone}}
+Jenis Qurban  : {{item_name}}
+
+Jika ada perubahan silahkan balas pesan ini.
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:02:00'),
+        (3, 'JADWAL_PENYEMBELIHAN', 'Assalamualaikum Sobat Qurban
+
+Kami ingin memberitahukan bahwa penyembelihan hewan qurban dengan peserta berikut :
+
+Nama Peserta  : {{customer_name}}
+No Telpon   : {{customer_phone}}
+Jenis Qurban  : {{item_name}}
+
+Akan dilakukan pada :
+
+Hari/Tanggal : {{slaughter_date}}
+Lokasi   : {{slaughter_location}}
+
+Jika terdapat kesalahan dalam penulisan peserta atau informasi lain, untuk langsung diinformasikan, agar langsung dilakukan update data.
+
+Terimakasih telah mempercayakan Qurban Tahun {{year}}H Anda di  x Rumah Qurban.
+
+Lacak pesanan: {{tracking_url}}
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:03:00'),
+        (4, 'KONFIRMASI_SEMBELIH', 'Assalamualaikum Sobat Qurban
+
+Kami ingin memberitahukan bahwa penyembelihan hewan qurban An. {{customer_name}} telah dilaksanakan. Sobat Qurban sudah bisa melakukan proses pemotongan kuku dan lain-lain. Untuk dokumentasi proses penyembelihan hingga penyaluran akan dikirim selanjutnya maksimal h+7 dari hari tasyrik.
+
+Terima kasih telah mempercayakan Qurban Anda di  x Rumah Qurban.
+
+Lacak pesanan: {{tracking_url}}
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:04:00'),
+        (5, 'LAPORAN_DOKUMENTASI', 'Assalamualaikum Sobat Qurban
+
+Kami ingin memberitahukan bahwa proses qurban An. {{customer_name}} telah dilaksanakan. Berikut kami lampirkan dokumentasinya:
+
+1. Sertifikat
+2. Report Proses Qurban
+3. Video Penyembelihan
+
+Terimakasih telah mempercayakan Qurban Anda di  x Rumah Qurban.
+
+Lacak pesanan: {{tracking_url}}
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:05:00')
       ON CONFLICT (id) DO UPDATE
       SET name = EXCLUDED.name,
           template_text = EXCLUDED.template_text
+    `;
+    
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('notif_templates', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM notif_templates LIMIT 1)
+          THEN (SELECT MAX(id) FROM notif_templates) ELSE 1 END,
+        EXISTS (SELECT 1 FROM notif_templates LIMIT 1)
+      )
     `;
 
     await sql`
@@ -753,6 +828,67 @@ async function main() {
         CASE WHEN EXISTS (SELECT 1 FROM farm_inventories LIMIT 1)
           THEN (SELECT MAX(id) FROM farm_inventories) ELSE 1 END,
         EXISTS (SELECT 1 FROM farm_inventories LIMIT 1)
+      )
+    `;
+
+    console.log("Seeding FAQs...");
+    const faqData = [
+      { productId: 1, category: "Qurban Antar", q: "Harga, Berat, dan data lain Hewan?", a: "Detail tersebut dapat Anda lihat langsung di dalam katalog aplikasi saat Anda memilih produk yang diinginkan.", order: 1 },
+      { productId: 1, category: "Qurban Antar", q: "Lokasi kandangnya dimana?", a: "Kandang utama kami untuk wilayah Bandung berada di daerah Cimenyan.", order: 2 },
+      { productId: 1, category: "Qurban Antar", q: "Apakah Ada Ongkir untuk Luar Kota?", a: "Free Ongkir (gratis ongkos kirim) berlaku khusus untuk wilayah Bandung Raya dan Jakarta Raya.", order: 3 },
+      { productId: 1, category: "Qurban Antar", q: "Apakah hewannya ada Surat Keterangan Sehat?", a: "Ada dong. Semua hewan kami dijamin kesehatannya.", order: 4 },
+      { productId: 1, category: "Qurban Antar", q: "Bagaimana Sistem Pembayarannya?", a: "Anda dapat transfer ke Rekening resmi kami. Boleh DP Minimal 50% untuk mengikat harga, dan pelunasan paling lambat H-7 sebelum pengiriman hewan.", order: 5 },
+      { productId: 3, category: "Qurban Berbagi", q: "Daerah penyalurannya dimana saja?", a: "Tersebar di beberapa wilayah Jawa Barat, Jawa Tengah, Jawa Timur, dan NTT. Secara spesifik berada di: Kab. Bandung, Majalengka, Brebes, Magelang, Bojonegoro, dan Kupang.", order: 1 },
+      { productId: 3, category: "Qurban Berbagi", q: "Spesifikasi hewan seperti apa?", a: "Untuk Domba rata-rata berbobot 21 - 25 Kg. Sedangkan untuk Sapi berbobot 200 - 250 Kg.", order: 2 },
+      { productId: 3, category: "Qurban Berbagi", q: "Waktu penyembelihan kapan saja?", a: "Penyembelihan dilakukan mulai dari Hari H Idul Adha sampai dengan Hari Tasyrik ke-3.", order: 3 },
+      { productId: 3, category: "Qurban Berbagi", q: "Dokumentasi seperti apa yang dikirimkan ke konsumen?", a: "Konsumen akan menerima 4 laporan: 1. Foto Hewan Hidup, 2. Video Penyembelihan, 3. Foto Penyaluran, 4. Sertifikat Qurban.", order: 4 },
+      { productId: 3, category: "Qurban Berbagi", q: "Notifikasi apa saja yang diterima Konsumen?", a: "Anda akan menerima update berupa: Notif Pembayaran, Verifikasi Data, Lokasi & Waktu Penyembelihan, Report Proses, hingga Ucapan Terima Kasih.", order: 5 },
+      { productId: 3, category: "Qurban Berbagi", q: "Apa saja Hak Pequrban?", a: "Hak Anda meliputi: Mendapatkan notifikasi selama proses qurban, Report dokumentasi, Video penyembelihan, dan Sertifikat Qurban.", order: 6 },
+      { productId: 3, category: "Qurban Berbagi", q: "Kenapa Qurban Berbagi lebih murah dibanding Antar/Kaleng?", a: "Karena hewannya dibeli langsung dari desa dan disebar langsung di desa tersebut. Ini adalah bentuk kepedulian kami berkolaborasi dengan warga desa dan menekan biaya logistik.", order: 7 },
+      { productId: 3, category: "Qurban Berbagi", q: "Berapa keluaran daging qurbannya?", a: "Domba menghasilkan sekitar 3,5 - 4 Kg daging. Sapi menghasilkan sekitar 45 - 50 Kg daging.", order: 8 },
+      { productId: 3, category: "Qurban Berbagi", q: "Berapa jumlah paket yang dibagikan ke warga?", a: "1 Ekor Domba menjadi 10 - 15 paket daging. 1 Ekor Sapi menjadi 70 - 90 paket daging.", order: 9 },
+      { productId: 2, category: "Qurban Kaleng", q: "Berapa Output Kaleng yang dihasilkan?", a: "SAPI STANDAR (±200kg): Kornet 350 klg / Rendang 250 klg. SAPI PREMIUM (±330kg): Kornet 550 klg / Rendang 450 klg. DOMBA: Kornet 35 klg / Rendang 25 klg.", order: 1 },
+      { productId: 2, category: "Qurban Kaleng", q: "Berapa lama sampai ke Pequrban/Mitra?", a: "Estimasi untuk Domba 1 bulan, dan Sapi 2 bulan. Termasuk rentang proses boning, frozen, hingga masuk kaleng.", order: 2 },
+      { productId: 2, category: "Qurban Kaleng", q: "Pabriknya dimana?", a: "Pabrik pengolahan kami berada di wilayah Tangerang.", order: 3 },
+      { productId: 2, category: "Qurban Kaleng", q: "Berapa lama pengerjaan pengalengan?", a: "Maksimal 2 Bulan, tergantung pada antrian pemrosesan di pabrik.", order: 4 },
+      { productId: 2, category: "Qurban Kaleng", q: "Berapa Gram isi 1 kaleng?", a: "Isi kemasan kaleng untuk sapi maupun domba adalah ±200 gram.", order: 5 },
+      { productId: 2, category: "Qurban Kaleng", q: "Berapa Minimum Order untuk produk kaleng?", a: "Minimal pemesanan untuk Sapi adalah 5 Ekor. Untuk Domba adalah 30 Ekor.", order: 6 },
+      { productId: 2, category: "Qurban Kaleng", q: "Apakah boleh pakai label/merk mitra sendiri?", a: "Bisa, namun tidak memiliki izin edar komersial (seperti BPOM), sehingga peruntukannya khusus untuk dibagikan secara gratis.", order: 7 },
+      { productId: 2, category: "Qurban Kaleng", q: "Pengiriman kaleng boleh ke berapa titik lokasi?", a: "Mohon maaf, pengiriman hanya kami lakukan untuk 1 titik pengiriman saja.", order: 8 },
+    ];
+
+    for (const faq of faqData) {
+      await sql`
+        INSERT INTO faqs (product_id, category, question, answer, display_order, is_active)
+        VALUES (${faq.productId}, ${faq.category}, ${faq.q}, ${faq.a}, ${faq.order}, TRUE)
+        ON CONFLICT DO NOTHING
+      `;
+    }
+
+    console.log("Seeding Admin Users...");
+    const superadminHash = await bcrypt.hash("Admin123!", 10);
+    const adminBandungHash = await bcrypt.hash("Admin123!", 10);
+
+    await sql`
+      INSERT INTO admin_users (id, email, password_hash, full_name, role, branch_id, is_active)
+      VALUES
+        (1, 'superadmin@rumahqurban.id', ${superadminHash}, 'Super Administrator', 'SUPERADMIN', NULL, TRUE),
+        (2, 'admin.bandung@rumahqurban.id', ${adminBandungHash}, 'Admin Bandung Raya', 'ADMIN_BRANCH', ${bandungId}, TRUE)
+      ON CONFLICT (id) DO UPDATE
+      SET email = EXCLUDED.email,
+          password_hash = EXCLUDED.password_hash,
+          full_name = EXCLUDED.full_name,
+          role = EXCLUDED.role,
+          branch_id = EXCLUDED.branch_id,
+          is_active = EXCLUDED.is_active
+    `;
+
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('admin_users', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM admin_users LIMIT 1)
+          THEN (SELECT MAX(id) FROM admin_users) ELSE 1 END,
+        EXISTS (SELECT 1 FROM admin_users LIMIT 1)
       )
     `;
 

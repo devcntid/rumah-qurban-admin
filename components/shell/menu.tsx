@@ -1,15 +1,21 @@
 import type { ReactNode } from "react";
 import {
   Activity,
+  Bell,
   ClipboardList,
   Database,
+  HelpCircle,
   LayoutDashboard,
   Map as MapIcon,
+  MessageSquare,
+  Scissors,
+  Send,
   ShoppingCart,
   Tags,
   TrendingUp,
   Truck,
   Users,
+  UserCog,
   Wallet,
 } from "lucide-react";
 
@@ -22,10 +28,15 @@ export type MenuItem = {
     | "customers"
     | "finance"
     | "farm"
+    | "slaughter"
     | "logistics"
     | "pricing"
     | "master"
-    | "logs";
+    | "faqs"
+    | "users"
+    | "logs"
+    | "notif-templates"
+    | "broadcast";
   label: string;
   href: string;
   icon: ReactNode;
@@ -75,6 +86,12 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: <MapIcon size={20} />,
   },
   {
+    id: "slaughter",
+    label: "Data Penyembelihan",
+    href: "/slaughter",
+    icon: <Scissors size={20} />,
+  },
+  {
     id: "logistics",
     label: "Logistik & Pengiriman",
     href: "/logistics",
@@ -91,6 +108,30 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Master Data",
     href: "/master",
     icon: <Database size={20} />,
+  },
+  {
+    id: "faqs",
+    label: "FAQ Management",
+    href: "/faqs",
+    icon: <HelpCircle size={20} />,
+  },
+  {
+    id: "notif-templates",
+    label: "Template Notifikasi",
+    href: "/notif-templates",
+    icon: <MessageSquare size={20} />,
+  },
+  {
+    id: "broadcast",
+    label: "Broadcast WhatsApp",
+    href: "/broadcast",
+    icon: <Send size={20} />,
+  },
+  {
+    id: "users",
+    label: "User Management",
+    href: "/users",
+    icon: <UserCog size={20} />,
   },
   {
     id: "logs",

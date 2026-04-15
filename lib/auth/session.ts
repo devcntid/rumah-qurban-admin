@@ -1,4 +1,5 @@
-import { cookies } from "next/headers";
+import { getServerSession as getNextAuthSession } from "next-auth";
+import { authOptions } from "@/lib/auth/next-auth";
 
 export type AdminRole =
   | "SUPER_ADMIN"
@@ -13,47 +14,40 @@ export type AdminSession = {
   branchId: number;
 };
 
-const COOKIE_NAME = "rq_admin_session";
+const ROLE_MAP: Record<string, AdminRole> = {
+  SUPERADMIN: "SUPER_ADMIN",
+  SUPER_ADMIN: "SUPER_ADMIN",
+  ADMIN_BRANCH: "ADMIN_CABANG",
+  ADMIN_CABANG: "ADMIN_CABANG",
+  FARM_TEAM: "FARM_TEAM",
+  LOGISTICS_TEAM: "LOGISTICS_TEAM",
+  SALES_VIEWER: "SALES_VIEWER",
+};
 
-export function decodeSession(raw: string): AdminSession | null {
-  try {
-    const json = Buffer.from(raw, "base64url").toString("utf8");
-    const parsed = JSON.parse(json) as Partial<AdminSession>;
-    if (
-      !parsed ||
-      typeof parsed.name !== "string" ||
-      typeof parsed.role !== "string" ||
-      typeof parsed.branchId !== "number"
-    ) {
-      return null;
-    }
-    return parsed as AdminSession;
-  } catch {
-    return null;
-  }
+function normalizeRole(raw: string): AdminRole {
+  return ROLE_MAP[raw] ?? (raw as AdminRole);
 }
 
 export async function getSession(): Promise<AdminSession | null> {
-  const cookieStore = await cookies();
-  const raw = cookieStore.get(COOKIE_NAME)?.value;
-  if (!raw) return null;
-  return decodeSession(raw);
+  const session = await getNextAuthSession(authOptions);
+  
+  if (!session || !session.user) {
+    return null;
+  }
+
+  return {
+    name: session.user.name,
+    role: normalizeRole(session.user.role as string),
+    branchId: session.user.branchId ?? 1,
+  };
 }
 
-export function encodeSession(session: AdminSession) {
-  const json = JSON.stringify(session);
-  return Buffer.from(json, "utf8").toString("base64url");
+export async function requireAuth(): Promise<AdminSession> {
+  const session = await getSession();
+  
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+  
+  return session;
 }
-
-export const sessionCookie = {
-  name: COOKIE_NAME,
-  options: {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  },
-};
-
-export const sessionCookieName = COOKIE_NAME;
-

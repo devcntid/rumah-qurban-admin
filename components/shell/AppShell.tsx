@@ -89,7 +89,7 @@ export function AppShell({
             <span className="font-semibold text-sm">{activeItem?.label}</span>
           </div>
           <div className="text-xs text-slate-500 font-semibold">
-            Simulasi Login
+            {session.role}
           </div>
         </header>
         <div className="flex-1 overflow-y-auto p-8">

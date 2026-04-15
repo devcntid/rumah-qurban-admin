@@ -8,8 +8,10 @@ import {
   deleteCatalogOffer, 
   listCatalogOffers, 
   countCatalogOffers,
-  getCatalogFilterOptions
+  getCatalogFilterOptions,
+  getCatalogOfferById
 } from "@/lib/db/queries/catalog";
+import { invalidateCatalogCache } from "@/lib/cache/redis";
 
 const catalogOfferSchema = z.object({
   id: z.number().optional(),
@@ -32,6 +34,14 @@ export async function saveCatalogOfferAction(data: any) {
   try {
     const validated = catalogOfferSchema.parse(data);
     const result = await saveCatalogOffer(validated);
+    
+    // Invalidate Redis cache
+    const productCode = data.productCode || undefined;
+    await invalidateCatalogCache(
+      validated.branchId || undefined,
+      productCode
+    );
+    
     revalidatePath("/pricing");
     return { success: true, id: result.id };
   } catch (error: any) {
@@ -44,7 +54,17 @@ export async function saveCatalogOfferAction(data: any) {
 
 export async function deleteCatalogOfferAction(id: number) {
   try {
+    // Get offer data before delete untuk invalidate specific cache
+    const offer = await getCatalogOfferById(id);
+    
     await deleteCatalogOffer(id);
+    
+    // Invalidate Redis cache
+    await invalidateCatalogCache(
+      offer?.branchId || undefined,
+      offer?.productCode || undefined
+    );
+    
     revalidatePath("/pricing");
     return { success: true };
   } catch (error: any) {
@@ -74,6 +94,10 @@ export async function bulkSaveCatalogAction(offers: any[]) {
       if (!offer.displayName || !offer.price) continue;
       await saveCatalogOffer(offer);
     }
+    
+    // Invalidate all catalog cache after bulk save
+    await invalidateCatalogCache();
+    
     revalidatePath("/pricing");
     return { success: true, count: offers.length };
   } catch (error: any) {

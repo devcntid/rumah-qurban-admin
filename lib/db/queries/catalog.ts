@@ -165,13 +165,25 @@ export async function countCatalogOffers(params: {
 export async function getCatalogOfferById(id: number) {
   const sql = getDb();
   const rows = (await sql`
-    SELECT id, product_id as "productId", animal_variant_id as "animalVariantId", 
-           branch_id as "branchId", vendor_id as "vendorId", display_name as "displayName", 
-           sub_type as "subType", sku_code as "skuCode", projected_weight as "projectedWeight", 
-           weight_range as "weightRange", description, price::text, image_url as "imageUrl", 
-           is_active as "isActive"
-    FROM catalog_offers
-    WHERE id = ${id}
+    SELECT 
+      co.id, 
+      co.product_id as "productId", 
+      co.animal_variant_id as "animalVariantId", 
+      co.branch_id as "branchId", 
+      co.vendor_id as "vendorId", 
+      co.display_name as "displayName", 
+      co.sub_type as "subType", 
+      co.sku_code as "skuCode", 
+      co.projected_weight as "projectedWeight", 
+      co.weight_range as "weightRange", 
+      co.description, 
+      co.price::text, 
+      co.image_url as "imageUrl", 
+      co.is_active as "isActive",
+      p.code as "productCode"
+    FROM catalog_offers co
+    LEFT JOIN products p ON co.product_id = p.id
+    WHERE co.id = ${id}
   `) as Record<string, unknown>[];
   return rows[0] as any;
 }

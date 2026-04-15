@@ -1,28 +1,36 @@
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
-
-const COOKIE_NAME = "rq_admin_session";
+import { getToken } from "next-auth/jwt";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/targets",
   "/pos",
   "/orders",
+  "/customers",
   "/transactions",
   "/farm",
+  "/slaughter",
   "/logistics",
   "/pricing",
   "/master",
   "/logs",
+  "/faqs",
+  "/users",
+  "/notif-templates",
+  "/broadcast",
 ];
 
-export function proxy(req: NextRequest, event: NextFetchEvent) {
+export async function proxy(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
   const isLogin = pathname === "/login";
   const isApp =
     pathname === "/" ||
     PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  const hasSession = Boolean(req.cookies.get(COOKIE_NAME)?.value);
+  const isApi = pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/");
+
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const hasSession = !!token;
 
   if (isLogin && hasSession) {
     const url = req.nextUrl.clone();
@@ -42,6 +50,10 @@ export function proxy(req: NextRequest, event: NextFetchEvent) {
     return NextResponse.redirect(url);
   }
 
+  if (isApi && !hasSession) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   return NextResponse.next();
 }
 
@@ -54,12 +66,24 @@ export const config = {
     "/targets/:path*",
     "/pos/:path*",
     "/orders/:path*",
+    "/customers/:path*",
     "/transactions/:path*",
     "/farm/:path*",
+    "/slaughter/:path*",
     "/logistics/:path*",
     "/pricing/:path*",
     "/master/:path*",
     "/logs/:path*",
+    "/faqs/:path*",
+    "/users/:path*",
+    "/notif-templates/:path*",
+    "/broadcast/:path*",
+    "/api/orders/:path*",
+    "/api/slaughter-records/:path*",
+    "/api/notif-templates/:path*",
+    "/api/notifications/:path*",
+    "/api/certificates/:path*",
+    "/api/admin-users/:path*",
+    "/api/faqs/:path*",
   ],
 };
-

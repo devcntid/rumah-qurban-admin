@@ -461,3 +461,74 @@ export const zainsLogs = pgTable("zains_logs", {
   statusCode: integer("status_code"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const faqs = pgTable(
+  "faqs",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    productId: bigint("product_id", { mode: "number" })
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 100 }).notNull(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    displayOrder: integer("display_order").notNull().default(0),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("idx_faqs_product_id").on(t.productId),
+    index("idx_faqs_category").on(t.category),
+    index("idx_faqs_active").on(t.isActive),
+  ]
+);
+
+export const adminUsers = pgTable(
+  "admin_users",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    email: varchar("email", { length: 100 }).notNull().unique(),
+    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+    fullName: varchar("full_name", { length: 150 }).notNull(),
+    role: varchar("role", { length: 50 }).notNull(),
+    branchId: bigint("branch_id", { mode: "number" }).references(() => branches.id),
+    isActive: boolean("is_active").default(true),
+    lastLoginAt: timestamp("last_login_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("unique_idx_admin_users_email").on(t.email),
+    index("idx_admin_users_branch").on(t.branchId),
+    index("idx_admin_users_role").on(t.role),
+  ]
+);
+
+export const slaughterRecords = pgTable(
+  "slaughter_records",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    farmInventoryId: bigint("farm_inventory_id", { mode: "number" })
+      .notNull()
+      .references(() => farmInventories.id, { onDelete: "cascade" }),
+    orderItemId: bigint("order_item_id", { mode: "number" })
+      .notNull()
+      .references(() => orderItems.id, { onDelete: "cascade" }),
+    slaughteredAt: timestamp("slaughtered_at").notNull(),
+    slaughterLocation: varchar("slaughter_location", { length: 255 }),
+    slaughterLatitude: decimal("slaughter_latitude", { precision: 10, scale: 8 }),
+    slaughterLongitude: decimal("slaughter_longitude", { precision: 11, scale: 8 }),
+    documentationPhotos: jsonb("documentation_photos").default([]),
+    certificateUrl: text("certificate_url"),
+    notes: text("notes"),
+    performedBy: varchar("performed_by", { length: 150 }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("idx_slaughter_records_farm_inventory").on(t.farmInventoryId),
+    index("idx_slaughter_records_order_item").on(t.orderItemId),
+    index("idx_slaughter_records_date").on(t.slaughteredAt),
+  ]
+);
