@@ -279,6 +279,37 @@ export async function verifyReceipt(receiptId: number, status: string, notes: st
   }
 }
 
+export async function markTransactionAsPaid(transactionId: number): Promise<{ orderId: number }> {
+  const sql = getDb();
+
+  const txRows = await sql`
+    SELECT order_id as "orderId", status
+    FROM transactions
+    WHERE id = ${transactionId}
+  ` as unknown as Array<{ orderId: number | null; status: string }>;
+
+  if (!txRows[0]) throw new Error("Transaksi tidak ditemukan");
+  if (!txRows[0].orderId) throw new Error("Transaksi belum terhubung dengan pesanan");
+  if (txRows[0].status === "PAID") throw new Error("Transaksi sudah berstatus PAID");
+
+  const orderId = txRows[0].orderId;
+
+  await sql`
+    UPDATE transactions
+    SET status = 'PAID'
+    WHERE id = ${transactionId}
+  `;
+
+  await sql`
+    UPDATE orders
+    SET status = 'FULL_PAID',
+        remaining_balance = 0
+    WHERE id = ${orderId}
+  `;
+
+  return { orderId };
+}
+
 export async function listStandaloneTransactions() {
   const sql = getDb();
   const rows = await sql`
