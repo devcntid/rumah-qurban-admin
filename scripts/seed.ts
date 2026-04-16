@@ -324,16 +324,19 @@ async function main() {
     `;
 
     await sql`
-      INSERT INTO payment_methods (id, code, name, category, coa_code, is_active) VALUES
-        (1, 'CASH', 'Tunai / Cash', 'OFFLINE_CASH', NULL, TRUE),
-        (2, 'TF_MANDIRI', 'Transfer Bank Mandiri', 'MANUAL_TRANSFER', '110-10-101', TRUE),
-        (3, 'XENDIT_VA_MANDIRI', 'Virtual Account Mandiri', 'VIRTUAL_ACCOUNT', NULL, TRUE),
-        (4, 'XENDIT_QRIS', 'QRIS Dinamis', 'EWALLET', NULL, TRUE)
+      INSERT INTO payment_methods (id, code, name, category, coa_code, is_active, account_holder_name, bank_name, account_number) VALUES
+        (1, 'CASH', 'Tunai / Cash', 'OFFLINE_CASH', NULL, TRUE, NULL, NULL, NULL),
+        (2, 'TF_MANDIRI', 'Transfer Bank Mandiri', 'MANUAL_TRANSFER', '110-10-101', TRUE, 'Rumah Qurban', 'Bank Mandiri', '1310007965835'),
+        (3, 'XENDIT_VA_MANDIRI', 'Virtual Account Mandiri', 'VIRTUAL_ACCOUNT', NULL, TRUE, NULL, NULL, NULL),
+        (4, 'XENDIT_QRIS', 'QRIS Dinamis', 'EWALLET', NULL, TRUE, NULL, NULL, NULL)
       ON CONFLICT (code) DO UPDATE
       SET name = EXCLUDED.name,
           category = EXCLUDED.category,
           coa_code = EXCLUDED.coa_code,
-          is_active = EXCLUDED.is_active
+          is_active = EXCLUDED.is_active,
+          account_holder_name = EXCLUDED.account_holder_name,
+          bank_name = EXCLUDED.bank_name,
+          account_number = EXCLUDED.account_number
     `;
 
     await sql`
@@ -499,7 +502,7 @@ async function main() {
          '2026-01-17', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 
          6035000, 71, 85000, 32222, 6067222, 
          'TANDUK', 71, 'TIPE F', 'TIPE F', 24.50, 
-         NULL, 'ALLOCATED', 3, '2026-05-01 08:00:00'),
+         NULL, 'AVAILABLE', NULL, '2026-05-01 08:00:00'),
         (2, 'RQ26A002', 'JT002', 'TAG-1002', 4, ${bandungId}, ${farmAgroId}, 
          '2026-01-17', 'MANDIRI', 'QURBAN ANTAR', 1, 'A', 
          5695000, 67, 85000, 32222, 5727222, 
@@ -574,6 +577,33 @@ async function main() {
           order_item_id = EXCLUDED.order_item_id,
           created_at = EXCLUDED.created_at
     `;
+
+    console.log("Seeding inventory_allocations for ALLOCATED farm_inventories...");
+    const allocatedPairs: [number, number, string][] = [
+      [6, 5, '2026-02-01 10:00:00'],
+      [7, 6, '2026-02-01 10:00:00'],
+      [8, 7, '2026-02-01 10:00:00'],
+      [9, 8, '2026-02-02 10:00:00'],
+      [10, 9, '2026-02-02 10:00:00'],
+      [11, 10, '2026-02-03 10:00:00'],
+      [12, 11, '2026-02-03 10:00:00'],
+      [5, 4, '2026-05-23 09:00:00'],
+      [14, 12, '2026-02-04 10:00:00'],
+      [15, 13, '2026-02-04 10:00:00'],
+      [16, 14, '2026-02-05 10:00:00'],
+      [17, 15, '2026-02-10 10:00:00'],
+      [18, 16, '2026-02-10 10:00:00'],
+      [19, 17, '2026-02-11 10:00:00'],
+      [20, 18, '2026-02-11 10:00:00'],
+      [21, 19, '2026-02-12 10:00:00'],
+    ];
+    for (const [orderItemId, farmInventoryId, allocatedAt] of allocatedPairs) {
+      await sql`
+        INSERT INTO inventory_allocations (order_item_id, farm_inventory_id, allocated_at)
+        VALUES (${orderItemId}, ${farmInventoryId}, ${allocatedAt}::timestamp)
+        ON CONFLICT DO NOTHING
+      `;
+    }
 
     await sql`
       INSERT INTO logistics_trips (id, branch_id, vehicle_plate, driver_name, scheduled_date, status) VALUES
@@ -748,7 +778,116 @@ Lacak pesanan: {{tracking_url}}
   x Rumah Qurban
 #SemuaBisaKenaManfaat
 Qurban Berbagi
-Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:05:00')
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:05:00'),
+        (6, 'PENGIRIMAN_DIJADWALKAN', 'Assalamualaikum Sobat Qurban
+
+Kami informasikan bahwa hewan qurban Anda telah dijadwalkan untuk dikirim.
+
+Nama Pemesan  : {{customer_name}}
+Jenis Qurban  : {{item_name}}
+No. Invoice   : {{invoice_number}}
+
+Jadwal Kirim  : {{delivery_date}}
+Kendaraan     : {{vehicle_plate}}
+Driver        : {{driver_name}}
+Kontak Driver : {{driver_phone}}
+Alamat Tujuan : {{destination_address}}
+
+Lacak pesanan: {{tracking_url}}
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:06:00'),
+        (7, 'PENGIRIMAN_DALAM_PERJALANAN', 'Assalamualaikum Sobat Qurban
+
+Hewan qurban Anda sedang dalam perjalanan menuju alamat tujuan.
+
+Nama Pemesan  : {{customer_name}}
+Jenis Qurban  : {{item_name}}
+No. Invoice   : {{invoice_number}}
+
+Kendaraan     : {{vehicle_plate}}
+Driver        : {{driver_name}}
+Kontak Driver : {{driver_phone}}
+
+Silakan pantau status pengiriman melalui link berikut:
+{{tracking_url}}
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:07:00'),
+        (8, 'PENGIRIMAN_TIBA', 'Assalamualaikum Sobat Qurban
+
+Alhamdulillah, hewan qurban Anda telah tiba di lokasi tujuan dengan selamat.
+
+Nama Pemesan  : {{customer_name}}
+Jenis Qurban  : {{item_name}}
+No. Invoice   : {{invoice_number}}
+Alamat Tujuan : {{destination_address}}
+Driver        : {{driver_name}}
+
+Semoga ibadah qurban Anda diterima oleh Allah SWT.
+
+Lacak pesanan: {{tracking_url}}
+
+  x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:08:00'),
+        (9, 'CHECKOUT', 'Assalamu''alaikum Bapak/Ibu {{customer_name}}, 🙏
+Berikut adalah tagihan transaksi Bapak/Ibu di Rumah Qurban untuk pemesanan di tanggal {{order_date}}
+
+Dengan detail order sebagai berikut:
+
+ Order ID       : {{invoice_number}}
+ Nama           : {{customer_name}}
+ Nama Peserta   : {{participant_names}}
+ No. Hp         : {{customer_phone}}
+
+ Keterangan pesanan: {{item_name}}
+ Total Tagihan  : {{grand_total}}
+
+Silahkan melakukan pembayaran maksimal 24 jam sejak Bapak/Ibu menerima pesan ini,
+atau pemesananan Bapak/Ibu akan di anggap gagal.
+
+Metode Pembayaran:
+{{payment_info}}
+
+Untuk panduan bayar, silahkan klik link berikut:
+
+1. Virtual Account
+https://template.nicepay.co.id/VA_ID/cimb.html
+
+2. Transfer Bank untuk BCA / BNI
+bit.ly/PanduanTransferBank
+
+Lacak pesanan: {{tracking_url}}
+
+🕌 x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:09:00'),
+        (10, 'PAID', 'Assalamu''alaikum Bapak/Ibu {{customer_name}}, 🙏
+
+Terima kasih atas pembayaran Bapak/Ibu
+
+Dengan detail pembayaran order sebagai berikut:
+
+ Order ID       : {{invoice_number}}
+ Nama           : {{customer_name}}
+ Nama Peserta   : {{participant_names}}
+ No. Hp         : {{customer_phone}}
+
+ Keterangan pesanan: {{item_name}}
+
+Lacak pesanan: {{tracking_url}}
+
+🕌 x Rumah Qurban
+#SemuaBisaKenaManfaat
+Qurban Berbagi
+Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:10:00')
       ON CONFLICT (id) DO UPDATE
       SET name = EXCLUDED.name,
           template_text = EXCLUDED.template_text

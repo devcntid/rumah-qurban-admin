@@ -14,6 +14,9 @@ export type OrderListRow = {
   dpPaid: string;
   remainingBalance: string;
   status: string;
+  totalAnimalItems: number;
+  allocatedCount: number;
+  slaughteredCount: number;
 };
 
 export async function listOrders(params: {
@@ -23,64 +26,93 @@ export async function listOrders(params: {
   q?: string;
   startDate?: string;
   endDate?: string;
+  allocationStatus?: string;
+  slaughterStatus?: string;
   limit: number;
   offset: number;
 }) {
   const sql = getDb();
   const where: string[] = ["1=1"];
+  const having: string[] = [];
   const values: unknown[] = [];
 
   if (params.branchId) {
     values.push(params.branchId);
-    where.push(`branch_id = $${values.length}`);
+    where.push(`o.branch_id = $${values.length}`);
   }
 
   if (params.customerType) {
     values.push(params.customerType);
-    where.push(`customer_type = $${values.length}`);
+    where.push(`o.customer_type = $${values.length}`);
   }
 
   if (params.status) {
     values.push(params.status);
-    where.push(`status = $${values.length}`);
+    where.push(`o.status = $${values.length}`);
   }
 
   if (params.startDate) {
     values.push(params.startDate);
-    where.push(`created_at >= $${values.length}::timestamp`);
+    where.push(`o.created_at >= $${values.length}::timestamp`);
   }
 
   if (params.endDate) {
     values.push(`${params.endDate} 23:59:59`);
-    where.push(`created_at <= $${values.length}::timestamp`);
+    where.push(`o.created_at <= $${values.length}::timestamp`);
   }
 
   if (params.q) {
     values.push(`%${params.q}%`);
     const p = values.length;
     where.push(
-      `(invoice_number ILIKE $${p} OR customer_name ILIKE $${p} OR customer_phone ILIKE $${p})`
+      `(o.invoice_number ILIKE $${p} OR o.customer_name ILIKE $${p} OR o.customer_phone ILIKE $${p})`
     );
   }
 
+  if (params.allocationStatus === "allocated") {
+    having.push(`COALESCE(COUNT(DISTINCT ia.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT ia.order_item_id), 0) >= COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.allocationStatus === "partial") {
+    having.push(`COALESCE(COUNT(DISTINCT ia.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT ia.order_item_id), 0) < COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.allocationStatus === "unallocated") {
+    having.push(`COALESCE(COUNT(DISTINCT ia.order_item_id), 0) = 0 AND COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END) > 0`);
+  }
+
+  if (params.slaughterStatus === "slaughtered") {
+    having.push(`COALESCE(COUNT(DISTINCT sr.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT sr.order_item_id), 0) >= COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.slaughterStatus === "partial") {
+    having.push(`COALESCE(COUNT(DISTINCT sr.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT sr.order_item_id), 0) < COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.slaughterStatus === "not_slaughtered") {
+    having.push(`COALESCE(COUNT(DISTINCT sr.order_item_id), 0) = 0 AND COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END) > 0`);
+  }
+
+  const havingClause = having.length > 0 ? `HAVING ${having.join(" AND ")}` : "";
+
   const query = `
     SELECT
-      id,
-      created_at as "createdAt",
-      invoice_number as "invoiceNumber",
-      branch_id as "branchId",
-      customer_name as "customerName",
-      customer_phone as "customerPhone",
-      customer_type as "customerType",
-      subtotal::text as subtotal,
-      discount::text as discount,
-      grand_total::text as "grandTotal",
-      dp_paid::text as "dpPaid",
-      remaining_balance::text as "remainingBalance",
-      status
-    FROM orders
+      o.id,
+      o.created_at as "createdAt",
+      o.invoice_number as "invoiceNumber",
+      o.branch_id as "branchId",
+      o.customer_name as "customerName",
+      o.customer_phone as "customerPhone",
+      o.customer_type as "customerType",
+      o.subtotal::text as subtotal,
+      o.discount::text as discount,
+      o.grand_total::text as "grandTotal",
+      o.dp_paid::text as "dpPaid",
+      o.remaining_balance::text as "remainingBalance",
+      o.status,
+      COALESCE(COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END), 0)::int as "totalAnimalItems",
+      COALESCE(COUNT(DISTINCT ia.order_item_id), 0)::int as "allocatedCount",
+      COALESCE(COUNT(DISTINCT sr.order_item_id), 0)::int as "slaughteredCount"
+    FROM orders o
+    LEFT JOIN order_items oi ON oi.order_id = o.id
+    LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id AND oi.item_type = 'ANIMAL'
+    LEFT JOIN slaughter_records sr ON sr.order_item_id = oi.id AND oi.item_type = 'ANIMAL'
     WHERE ${where.join(" AND ")}
-    ORDER BY created_at DESC, id DESC
+    GROUP BY o.id
+    ${havingClause}
+    ORDER BY o.created_at DESC, o.id DESC
     LIMIT ${params.limit} OFFSET ${params.offset}
   `;
 
@@ -95,52 +127,80 @@ export async function countOrders(params: {
   q?: string;
   startDate?: string;
   endDate?: string;
+  allocationStatus?: string;
+  slaughterStatus?: string;
 }) {
   const sql = getDb();
   const where: string[] = ["1=1"];
+  const having: string[] = [];
   const values: unknown[] = [];
 
   if (params.branchId) {
     values.push(params.branchId);
-    where.push(`branch_id = $${values.length}`);
+    where.push(`o.branch_id = $${values.length}`);
   }
 
   if (params.customerType) {
     values.push(params.customerType);
-    where.push(`customer_type = $${values.length}`);
+    where.push(`o.customer_type = $${values.length}`);
   }
 
   if (params.status) {
     values.push(params.status);
-    where.push(`status = $${values.length}`);
+    where.push(`o.status = $${values.length}`);
   }
 
   if (params.startDate) {
     values.push(params.startDate);
-    where.push(`created_at >= $${values.length}::timestamp`);
+    where.push(`o.created_at >= $${values.length}::timestamp`);
   }
 
   if (params.endDate) {
     values.push(`${params.endDate} 23:59:59`);
-    where.push(`created_at <= $${values.length}::timestamp`);
+    where.push(`o.created_at <= $${values.length}::timestamp`);
   }
 
   if (params.q) {
     values.push(`%${params.q}%`);
     const p = values.length;
     where.push(
-      `(invoice_number ILIKE $${p} OR customer_name ILIKE $${p} OR customer_phone ILIKE $${p})`
+      `(o.invoice_number ILIKE $${p} OR o.customer_name ILIKE $${p} OR o.customer_phone ILIKE $${p})`
     );
   }
 
+  if (params.allocationStatus === "allocated") {
+    having.push(`COALESCE(COUNT(DISTINCT ia.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT ia.order_item_id), 0) >= COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.allocationStatus === "partial") {
+    having.push(`COALESCE(COUNT(DISTINCT ia.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT ia.order_item_id), 0) < COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.allocationStatus === "unallocated") {
+    having.push(`COALESCE(COUNT(DISTINCT ia.order_item_id), 0) = 0 AND COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END) > 0`);
+  }
+
+  if (params.slaughterStatus === "slaughtered") {
+    having.push(`COALESCE(COUNT(DISTINCT sr.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT sr.order_item_id), 0) >= COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.slaughterStatus === "partial") {
+    having.push(`COALESCE(COUNT(DISTINCT sr.order_item_id), 0) > 0 AND COALESCE(COUNT(DISTINCT sr.order_item_id), 0) < COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END)`);
+  } else if (params.slaughterStatus === "not_slaughtered") {
+    having.push(`COALESCE(COUNT(DISTINCT sr.order_item_id), 0) = 0 AND COUNT(DISTINCT CASE WHEN oi.item_type = 'ANIMAL' THEN oi.id END) > 0`);
+  }
+
+  const havingClause = having.length > 0 ? `HAVING ${having.join(" AND ")}` : "";
+
   const query = `
-    SELECT count(*)
-    FROM orders
-    WHERE ${where.join(" AND ")}
+    SELECT COUNT(*) as count FROM (
+      SELECT o.id
+      FROM orders o
+      LEFT JOIN order_items oi ON oi.order_id = o.id
+      LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id AND oi.item_type = 'ANIMAL'
+      LEFT JOIN slaughter_records sr ON sr.order_item_id = oi.id AND oi.item_type = 'ANIMAL'
+      WHERE ${where.join(" AND ")}
+      GROUP BY o.id
+      ${havingClause}
+    ) sub
   `;
 
   const rows = await sql.query(query, values);
-  return parseInt((rows as any)[0].count);
+  return parseInt((rows as unknown as Array<{ count: string }>)[0].count);
 }
 
 export async function deleteOrder(id: number) {

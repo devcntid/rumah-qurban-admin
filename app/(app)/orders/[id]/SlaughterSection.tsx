@@ -10,13 +10,13 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  FileText,
   RefreshCcw,
   ChevronDown,
   ChevronUp,
   Upload,
   X,
   Image as ImageIcon,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -165,6 +165,9 @@ function SlaughterItemRow({
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState<SlaughterRecordDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (item.slaughterRecordId) {
@@ -188,6 +191,15 @@ function SlaughterItemRow({
     } finally {
       setLoadingDetail(false);
     }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles((prev) => [...prev, ...files]);
+  }
+
+  function removeFile(index: number) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -223,13 +235,34 @@ function SlaughterItemRow({
         const err = await res.json();
         throw new Error(err.error || "Gagal menyimpan");
       }
+      const result = await res.json();
+      const recordId = result.id;
+
+      if (selectedFiles.length > 0 && recordId) {
+        setUploadProgress(`Mengupload ${selectedFiles.length} foto...`);
+        const photoFormData = new FormData();
+        for (const file of selectedFiles) {
+          photoFormData.append("photos", file);
+        }
+        const photoRes = await fetch(`/api/slaughter-records/${recordId}/photos`, {
+          method: "POST",
+          body: photoFormData,
+        });
+        if (!photoRes.ok) {
+          toast.warning("Data tersimpan, tapi gagal upload foto. Coba upload ulang di halaman detail.");
+        }
+      }
+
       toast.success("Data penyembelihan berhasil disimpan");
       setShowForm(false);
+      setSelectedFiles([]);
+      setUploadProgress(null);
       onUpdated();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menyimpan");
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   }
 
@@ -299,13 +332,15 @@ function SlaughterItemRow({
                   Lihat Detail
                 </Link>
               )}
-              {detail.certificateUrl && (
+              {item.slaughterRecordId && (
                 <a
-                  href={detail.certificateUrl}
+                  href={`/api/certificates/${item.slaughterRecordId}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-[10px] font-black text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors flex items-center gap-1"
                 >
-                  <FileText size={10} /> Sertifikat
+                  <ExternalLink size={10} />
+                  Lihat Sertifikat
                 </a>
               )}
             </div>
@@ -393,10 +428,65 @@ function SlaughterItemRow({
               />
             </div>
           </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+              Foto Dokumentasi
+            </label>
+            <div
+              className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:border-red-300 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+                title="Pilih foto dokumentasi"
+              />
+              <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                <Upload size={20} />
+                <span className="text-xs font-bold">Klik untuk pilih foto atau drop file di sini</span>
+                <span className="text-[10px]">JPG, PNG (maks beberapa foto)</span>
+              </div>
+            </div>
+            {selectedFiles.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selectedFiles.map((file, index) => (
+                  <div key={`${file.name}-${index}`} className="relative group">
+                    <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                      <ImageIcon size={20} className="text-slate-300" />
+                    </div>
+                    <div className="absolute -top-1 -right-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                        className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                        title="Hapus foto"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                    <p className="text-[8px] text-slate-400 mt-0.5 max-w-[64px] truncate">{file.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {uploadProgress && (
+            <div className="flex items-center gap-2 text-xs text-amber-600 font-bold">
+              <Loader2 size={12} className="animate-spin" />
+              {uploadProgress}
+            </div>
+          )}
+
           <div className="flex gap-2 justify-end">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => { setShowForm(false); setSelectedFiles([]); }}
               className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 font-bold"
             >
               Batal

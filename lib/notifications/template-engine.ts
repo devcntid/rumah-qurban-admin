@@ -11,6 +11,14 @@ export type OrderData = {
   participantNames: string[];
   slaughterDate?: string;
   slaughterLocation?: string;
+  orderDate?: string;
+  grandTotal?: string;
+  deliveryAddress?: string;
+  paymentMethodName?: string;
+  vaNumber?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
 };
 
 export async function getOrderDataForNotification(orderId: number): Promise<OrderData | null> {
@@ -21,6 +29,9 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
     invoiceNumber: string;
     customerName: string;
     customerPhone: string | null;
+    grandTotal: string | null;
+    createdAt: string | null;
+    deliveryAddress: string | null;
   };
 
   type ItemRow = {
@@ -31,12 +42,23 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
 
   type ParticipantRow = { participantName: string };
 
+  type PaymentRow = {
+    paymentMethodName: string | null;
+    vaNumber: string | null;
+    bankName: string | null;
+    accountNumber: string | null;
+    accountHolderName: string | null;
+  };
+
   const orderRows = await sql`
     SELECT 
       o.id as "orderId",
       o.invoice_number as "invoiceNumber",
       o.customer_name as "customerName",
-      o.customer_phone as "customerPhone"
+      o.customer_phone as "customerPhone",
+      o.grand_total::text as "grandTotal",
+      o.created_at::text as "createdAt",
+      o.delivery_address as "deliveryAddress"
     FROM orders o
     WHERE o.id = ${orderId}
   ` as unknown as OrderRow[];
@@ -47,9 +69,9 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
     SELECT 
       oi.id as "orderItemId",
       oi.item_name as "itemName",
-      fi.id as "farmInventoryId"
+      ia.farm_inventory_id as "farmInventoryId"
     FROM order_items oi
-    LEFT JOIN farm_inventories fi ON fi.order_item_id = oi.id
+    LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id
     WHERE oi.order_id = ${orderId}
     AND oi.item_type = 'ANIMAL'
     LIMIT 1
@@ -66,6 +88,22 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
   const item = itemRows[0];
   const participantNames = participantRows.map((p) => p.participantName);
 
+  const paymentRows = await sql`
+    SELECT 
+      pm.name as "paymentMethodName",
+      t.va_number as "vaNumber",
+      pm.bank_name as "bankName",
+      pm.account_number as "accountNumber",
+      pm.account_holder_name as "accountHolderName"
+    FROM transactions t
+    LEFT JOIN payment_methods pm ON t.payment_method_code = pm.code
+    WHERE t.order_id = ${orderId}
+    ORDER BY t.created_at DESC
+    LIMIT 1
+  ` as unknown as PaymentRow[];
+
+  const payment = paymentRows[0];
+
   let slaughterDate: string | undefined;
   let slaughterLocation: string | undefined;
 
@@ -81,6 +119,21 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
     }
   }
 
+  let orderDate: string | undefined;
+  if (order.createdAt) {
+    const d = new Date(order.createdAt);
+    orderDate = d.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }) + ", " + d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  let grandTotal: string | undefined;
+  if (order.grandTotal) {
+    grandTotal = "IDR " + Number(order.grandTotal).toLocaleString("id-ID");
+  }
+
   return {
     orderId: order.orderId,
     invoiceNumber: order.invoiceNumber,
@@ -90,6 +143,14 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
     participantNames,
     slaughterDate,
     slaughterLocation,
+    orderDate,
+    grandTotal,
+    deliveryAddress: order.deliveryAddress || undefined,
+    paymentMethodName: payment?.paymentMethodName || undefined,
+    vaNumber: payment?.vaNumber || undefined,
+    bankName: payment?.bankName || undefined,
+    accountNumber: payment?.accountNumber || undefined,
+    accountHolderName: payment?.accountHolderName || undefined,
   };
 }
 
@@ -104,6 +165,21 @@ export function buildVariableMap(
     ? `https://tracking.rumahqurban.id/lacak/${orderData.customerPhone.replace(/\D/g, "")}`
     : "https://tracking.rumahqurban.id/lacak/";
 
+  let paymentInfo = "-";
+  if (orderData.paymentMethodName) {
+    const lines: string[] = [`- ${orderData.paymentMethodName}`];
+    if (orderData.vaNumber) {
+      lines.push(`- Kode pembayaran : ${orderData.vaNumber}`);
+    }
+    if (orderData.bankName && orderData.accountNumber) {
+      lines.push(`- ${orderData.bankName} : ${orderData.accountNumber}`);
+      if (orderData.accountHolderName) {
+        lines.push(`  a.n. ${orderData.accountHolderName}`);
+      }
+    }
+    paymentInfo = lines.join("\n");
+  }
+
   const variables: Record<string, string> = {
     customer_name: orderData.customerName,
     customer_phone: orderData.customerPhone || "-",
@@ -117,6 +193,12 @@ export function buildVariableMap(
     slaughter_location: orderData.slaughterLocation || "-",
     tracking_url: trackingUrl,
     year: String(hijriYear),
+    order_date: orderData.orderDate || "-",
+    grand_total: orderData.grandTotal || "-",
+    payment_method: orderData.paymentMethodName || "-",
+    va_number: orderData.vaNumber || "-",
+    payment_info: paymentInfo,
+    destination_address: orderData.deliveryAddress || "-",
     ...customVariables,
   };
 

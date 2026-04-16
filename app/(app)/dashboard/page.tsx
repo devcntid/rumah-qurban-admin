@@ -88,12 +88,12 @@ export default async function DashboardPage() {
               <tbody>
                 {targetRows.map((r) => (
                   <tr key={r.salesTargetId} className="border-b border-slate-50">
-                    <td className="p-3 font-medium">{r.species}</td>
-                    <td className="p-3">{r.productCode}</td>
-                    <td className="p-3 text-right">{r.targetEkor}</td>
-                    <td className="p-3 text-right">{r.actualEkor}</td>
-                    <td className="p-3 text-right">{formatIDR(r.targetOmset)}</td>
-                    <td className="p-3 text-right">{formatIDR(r.actualOmset)}</td>
+                    <td className="p-3 font-medium text-slate-800">{r.species}</td>
+                    <td className="p-3 text-slate-700">{r.productCode}</td>
+                    <td className="p-3 text-right text-slate-800">{r.targetEkor}</td>
+                    <td className="p-3 text-right text-slate-800">{r.actualEkor}</td>
+                    <td className="p-3 text-right text-slate-800">{formatIDR(r.targetOmset)}</td>
+                    <td className="p-3 text-right text-slate-800">{formatIDR(r.actualOmset)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -7,6 +7,7 @@ import {
   listFarmInventoryIdsEligibleForManifest,
   listFarmInventoryIdsEligibleGlobally,
 } from "@/lib/db/queries/logistics";
+import { getAllNotifTemplates } from "@/lib/db/queries/notif-templates";
 import TripDetailClient from "@/components/logistics/TripDetailClient";
 
 const PAGE_SIZES = new Set([10, 20, 50, 100]);
@@ -34,7 +35,7 @@ export default async function LogisticsTripDetailPage({
   if (!session) notFound();
 
   const superAdmin = session.role === "SUPER_ADMIN";
-  const [trip, manifests, manifestTotal, eligibleAnimals] = await Promise.all([
+  const [trip, manifests, manifestTotal, eligibleAnimals, notifTemplates] = await Promise.all([
     getLogisticsTripById(tripId, session.branchId, superAdmin),
     listDeliveryManifestsForTripIdPaged({
       tripId,
@@ -47,6 +48,7 @@ export default async function LogisticsTripDetailPage({
     superAdmin
       ? listFarmInventoryIdsEligibleGlobally()
       : listFarmInventoryIdsEligibleForManifest(session.branchId),
+    getAllNotifTemplates(),
   ]);
 
   if (!trip) notFound();
@@ -60,6 +62,7 @@ export default async function LogisticsTripDetailPage({
       page={page}
       pageSize={pageSize}
       eligibleAnimals={eligibleAnimals}
+      notifTemplates={notifTemplates}
     />
   );
 }

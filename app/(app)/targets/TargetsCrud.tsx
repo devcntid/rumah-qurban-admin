@@ -90,7 +90,7 @@ export function TargetsCrud({ rows }: { rows: SalesTargetRow[] }) {
                   {r.category}
                 </span>
               </td>
-              <td className="p-4 text-right font-bold">{r.targetEkor}</td>
+              <td className="p-4 text-right font-bold text-slate-800">{r.targetEkor}</td>
               <td className="p-4 text-right font-semibold text-slate-800">
                 {formatIDR(r.targetOmset)}
               </td>

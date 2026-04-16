@@ -281,7 +281,7 @@ export function MasterCrud({
                   <td className="p-4 font-semibold text-slate-700">{b.id}</td>
                   <td className="p-4 font-semibold text-slate-800">{b.name}</td>
                   <td className="p-4 font-mono text-xs text-blue-600">{b.coaCode ?? "-"}</td>
-                  <td className="p-4">{b.isActive ? "Aktif" : "Nonaktif"}</td>
+                  <td className="p-4 text-slate-700 font-medium">{b.isActive ? "Aktif" : "Nonaktif"}</td>
                   <td className="p-4 text-center">
                     <div className="inline-flex gap-2">
                       <button
@@ -393,7 +393,7 @@ export function MasterCrud({
                     {p.accountHolderName && <div className="text-[10px] text-slate-700">a.n. {p.accountHolderName}</div>}
                   </td>
                   <td className="p-4 font-mono text-xs text-slate-700">{p.coaCode ?? "-"}</td>
-                  <td className="p-4">{p.isActive ? "Aktif" : "Nonaktif"}</td>
+                  <td className="p-4 text-slate-700 font-medium">{p.isActive ? "Aktif" : "Nonaktif"}</td>
                   <td className="p-4 text-center">
                     <div className="inline-flex gap-2">
                       <button

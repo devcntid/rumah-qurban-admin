@@ -82,12 +82,12 @@ export default async function TargetsPage({
               <tbody>
                 {achievement.map((a) => (
                   <tr key={a.salesTargetId} className="border-b border-slate-100">
-                    <td className="p-3 font-medium">{a.species}</td>
-                    <td className="p-3">{a.productCode}</td>
-                    <td className="p-3 text-right">{a.targetEkor}</td>
-                    <td className="p-3 text-right">{a.actualEkor}</td>
-                    <td className="p-3 text-right">{formatIDR(a.targetOmset)}</td>
-                    <td className="p-3 text-right">{formatIDR(a.actualOmset)}</td>
+                    <td className="p-3 font-medium text-slate-800">{a.species}</td>
+                    <td className="p-3 text-slate-700">{a.productCode}</td>
+                    <td className="p-3 text-right text-slate-800">{a.targetEkor}</td>
+                    <td className="p-3 text-right text-slate-800">{a.actualEkor}</td>
+                    <td className="p-3 text-right text-slate-800">{formatIDR(a.targetOmset)}</td>
+                    <td className="p-3 text-right text-slate-800">{formatIDR(a.actualOmset)}</td>
                   </tr>
                 ))}
               </tbody>

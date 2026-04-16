@@ -210,7 +210,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                       <span className="font-black text-slate-800">{formatIDR(order.grandTotal)}</span>
                     </td>
                     <td className="px-6 py-3 text-center">
-                      <span className="inline-block px-2 py-1 rounded text-[9px] font-black uppercase">
+                      <span className="inline-block px-2 py-1 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-700 border border-slate-200">
                         {order.status}
                       </span>
                     </td>

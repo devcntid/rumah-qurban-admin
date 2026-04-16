@@ -18,31 +18,32 @@ export default async function OrdersPage(props: {
   const q = searchParams.q as string | undefined;
   const startDate = searchParams.startDate as string | undefined;
   const endDate = searchParams.endDate as string | undefined;
+  const allocationStatus = searchParams.allocationStatus as string | undefined;
+  const slaughterStatus = searchParams.slaughterStatus as string | undefined;
   const page = searchParams.page ? Number(searchParams.page) : 1;
   const pageSize = searchParams.pageSize ? Number(searchParams.pageSize) : 10;
 
   const sql = getDb();
 
+  const filterParams = {
+    branchId,
+    status,
+    customerType,
+    q,
+    startDate,
+    endDate,
+    allocationStatus,
+    slaughterStatus,
+  };
+
   const [branches, initialData, totalCount] = await Promise.all([
     sql`SELECT id, name FROM branches WHERE is_active = TRUE ORDER BY name`,
     listOrders({
-      branchId,
-      status,
-      customerType,
-      q,
-      startDate,
-      endDate,
+      ...filterParams,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     }),
-    countOrders({
-      branchId,
-      status,
-      customerType,
-      q,
-      startDate,
-      endDate,
-    }),
+    countOrders(filterParams),
   ]);
 
   return (

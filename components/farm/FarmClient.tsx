@@ -620,7 +620,7 @@ export default function FarmClient({
                           title={item.status === 'ALLOCATED' || item.orderItemId ? 'Hewan sudah ter-match dengan order' : 'Pilih hewan'}
                         />
                       </td>
-                      <td className="px-4 py-3 text-center text-slate-400 font-mono text-xs">
+                      <td className="px-4 py-3 text-center text-slate-600 font-mono text-xs">
                         {(page - 1) * pageSize + index + 1}
                       </td>
                       <td className="px-4 py-3">
@@ -668,16 +668,16 @@ export default function FarmClient({
                       <td className="px-4 py-3 text-xs font-black text-indigo-700 leading-tight">{item.penName || "—"}</td>
                       <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-nowrap">{item.panName || "—"}</td>
                       <td className="px-4 py-3 text-right font-black text-[#102a43] text-xs">{item.initialWeight || "—"}</td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-400 text-xs">{item.initialWeightSource || "—"}</td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-600 text-xs">{item.initialWeightSource || "—"}</td>
                       <td className="px-4 py-3 text-right font-black text-blue-700 text-xs">{item.weightActual || "—"}</td>
                       <td className="px-4 py-3 text-xs font-bold text-slate-600">{item.hornType || "—"}</td>
                       <td className="px-4 py-3 text-right font-black text-slate-700 text-xs">
                         {item.purchasePrice ? new Intl.NumberFormat('id-ID').format(Number(item.purchasePrice)) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-400 text-xs">
+                      <td className="px-4 py-3 text-right font-medium text-slate-700 text-xs">
                         {item.pricePerKg ? new Intl.NumberFormat('id-ID').format(Number(item.pricePerKg)) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-400 text-xs">
+                      <td className="px-4 py-3 text-right font-medium text-slate-700 text-xs">
                         {item.shippingCost ? new Intl.NumberFormat('id-ID').format(Number(item.shippingCost)) : "—"}
                       </td>
                       <td className="px-4 py-3 text-right font-black text-[#102a43] text-xs">
@@ -686,8 +686,8 @@ export default function FarmClient({
                       <td className="px-4 py-3 text-xs text-slate-500 italic lowercase">{item.initialType || "—"}</td>
                       <td className="px-4 py-3 text-xs text-slate-500 italic lowercase">{item.finalType || "—"}</td>
                       <td className="px-4 py-3 text-[10px] text-blue-500 truncate max-w-[100px]">{item.photoUrl || "—"}</td>
-                      <td className="px-4 py-3 text-center text-slate-400 font-mono text-xs">{item.orderItemId || "—"}</td>
-                      <td className="px-4 py-3 text-[9px] text-slate-400 whitespace-nowrap">
+                      <td className="px-4 py-3 text-center text-slate-600 font-mono text-xs">{item.orderItemId || "—"}</td>
+                      <td className="px-4 py-3 text-[9px] text-slate-600 whitespace-nowrap">
                         {item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                       </td>
                       <td className="px-4 py-3 text-right sticky right-0 bg-white group-hover:bg-slate-50 transition-colors border-l border-slate-100">
@@ -707,10 +707,10 @@ export default function FarmClient({
                   ))}
                   {initialData.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="p-32 text-center opacity-30">
+                      <td colSpan={11} className="p-32 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <Search size={64} className="text-slate-300" />
-                          <p className="font-black text-xl text-slate-400 tracking-tight">Tidak ada data ditemukan</p>
+                          <p className="font-black text-xl text-slate-500 tracking-tight">Tidak ada data ditemukan</p>
                         </div>
                       </td>
                     </tr>
@@ -757,10 +757,10 @@ export default function FarmClient({
                 ))}
                 {pens.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-32 text-center opacity-30">
+                    <td colSpan={4} className="p-32 text-center">
                       <div className="flex flex-col items-center gap-4">
                         <MapPin size={64} className="text-slate-300" />
-                        <p className="font-black text-xl text-slate-400 tracking-tight">Belum ada data kandang</p>
+                        <p className="font-black text-xl text-slate-500 tracking-tight">Belum ada data kandang</p>
                       </div>
                     </td>
                   </tr>

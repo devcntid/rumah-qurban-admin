@@ -15,7 +15,9 @@ import {
   Loader2,
   Upload,
   Send,
-  MessageSquare
+  MessageSquare,
+  Beef,
+  Scissors,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import { FiltersBar, FilterField } from "@/components/ui/FiltersBar";
@@ -220,6 +222,28 @@ export default function OrdersClient({
         { label: "CANCELLED", value: "CANCELLED" }
       ]
     },
+    {
+      key: "allocationStatus",
+      label: "Status Alokasi",
+      type: "select",
+      options: [
+        { label: "SEMUA", value: "" },
+        { label: "Belum Alokasi", value: "unallocated" },
+        { label: "Sebagian", value: "partial" },
+        { label: "Lengkap", value: "allocated" },
+      ]
+    },
+    {
+      key: "slaughterStatus",
+      label: "Status Sembelih",
+      type: "select",
+      options: [
+        { label: "SEMUA", value: "" },
+        { label: "Belum Sembelih", value: "not_slaughtered" },
+        { label: "Sebagian", value: "partial" },
+        { label: "Lengkap", value: "slaughtered" },
+      ]
+    },
   ];
 
   return (
@@ -286,6 +310,8 @@ export default function OrdersClient({
                 <th className="px-6 py-4">Pelanggan</th>
                 <th className="px-6 py-4">Metrik Finansial</th>
                 <th className="px-6 py-4 text-center">Status Bayar</th>
+                <th className="px-4 py-4 text-center">Alokasi</th>
+                <th className="px-4 py-4 text-center">Sembelih</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
@@ -347,6 +373,38 @@ export default function OrdersClient({
                       {o.status.replace("_", " ")}
                     </span>
                   </td>
+                  <td className="px-4 py-4 text-center">
+                    {o.totalAnimalItems > 0 ? (
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black border ${
+                        o.allocatedCount >= o.totalAnimalItems
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : o.allocatedCount > 0
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-slate-50 text-slate-400 border-slate-200"
+                      }`}>
+                        <Beef size={10} />
+                        {o.allocatedCount}/{o.totalAnimalItems}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-300">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    {o.totalAnimalItems > 0 ? (
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black border ${
+                        o.slaughteredCount >= o.totalAnimalItems
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : o.slaughteredCount > 0
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-slate-50 text-slate-400 border-slate-200"
+                      }`}>
+                        <Scissors size={10} />
+                        {o.slaughteredCount}/{o.totalAnimalItems}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-300">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2 text-slate-300 group-hover:text-slate-400 transition-colors">
                       <a
@@ -387,9 +445,9 @@ export default function OrdersClient({
               ))}
               {initialData.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-32 text-center opacity-30">
+                  <td colSpan={9} className="py-32 text-center">
                     <ShoppingCart size={64} className="mx-auto mb-4 text-slate-300" />
-                    <p className="font-black text-xl text-slate-400">Belum ada pesanan ditemukan</p>
+                    <p className="font-black text-xl text-slate-500">Belum ada pesanan ditemukan</p>
                   </td>
                 </tr>
               )}

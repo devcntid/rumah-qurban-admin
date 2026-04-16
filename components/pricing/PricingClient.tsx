@@ -285,7 +285,7 @@ export default function PricingClient({
               )}
               {initialData.map((item, index) => (
                 <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-4 text-center text-slate-400 font-mono">
+                  <td className="px-6 py-4 text-center text-slate-600 font-mono">
                     {(page - 1) * pageSize + index + 1}
                   </td>
                   <td className="px-6 py-4">
@@ -349,9 +349,9 @@ export default function PricingClient({
               ))}
               {initialData.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-32 text-center opacity-30">
+                  <td colSpan={9} className="py-32 text-center">
                     <Search size={64} className="mx-auto mb-4 text-slate-300" />
-                    <p className="font-black text-xl text-slate-400">Belum ada penawaran tersedia</p>
+                    <p className="font-black text-xl text-slate-500">Belum ada penawaran tersedia</p>
                   </td>
                 </tr>
               )}

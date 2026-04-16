@@ -124,7 +124,7 @@ export function TransactionList({
             <tbody className="text-sm divide-y divide-slate-100">
               {data.map((t, i) => (
                 <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-5 text-center text-[10px] font-black text-slate-400">
+                  <td className="p-5 text-center text-[10px] font-black text-slate-600">
                     {(currentPage - 1) * 10 + i + 1}
                   </td>
                   <td className="p-5">
@@ -133,7 +133,7 @@ export function TransactionList({
                         day: "2-digit", month: "long", year: "numeric"
                       })}
                     </div>
-                    <div className="text-[9px] text-slate-400 font-bold uppercase mb-1">
+                    <div className="text-[9px] text-slate-500 font-bold uppercase mb-1">
                       Dicatat: {new Date(t.createdAt).toLocaleDateString("id-ID", { 
                         day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
                       })}
@@ -177,9 +177,9 @@ export function TransactionList({
               {data.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-20 text-center">
-                    <div className="flex flex-col items-center gap-4 opacity-30">
-                       <AlertCircle size={60}/>
-                       <p className="text-lg font-bold">Belum ada transaksi ditemukan.</p>
+                    <div className="flex flex-col items-center gap-4">
+                       <AlertCircle size={60} className="text-slate-300"/>
+                       <p className="text-lg font-bold text-slate-500">Belum ada transaksi ditemukan.</p>
                     </div>
                   </td>
                 </tr>

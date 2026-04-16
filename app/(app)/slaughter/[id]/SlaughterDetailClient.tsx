@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Calendar, MapPin, User, FileText, Camera,
+  ArrowLeft, Calendar, MapPin, User, Camera,
   Trash2, Plus, Save, Send, Eye, Download, Loader2, X
 } from "lucide-react";
 import { api, ApiException } from "@/lib/api/client";
@@ -148,28 +148,6 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
     });
   };
 
-  const handleGenerateCertificate = async () => {
-    startTransition(async () => {
-      try {
-        const data = await api<{ success: boolean; certificateUrl?: string }>(
-          "/api/certificates/generate",
-          {
-            method: "POST",
-            json: { slaughterRecordId: record.id },
-          }
-        );
-
-        if (data.certificateUrl) {
-          toast.success("Sertifikat berhasil dibuat");
-          window.open(data.certificateUrl, "_blank");
-          router.refresh();
-        }
-      } catch (error) {
-        toast.error("Gagal membuat sertifikat");
-      }
-    });
-  };
-
   const handleSendNotification = async () => {
     if (!selectedTemplateId) {
       toast.error("Pilih template notifikasi");
@@ -228,26 +206,15 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
               <Send size={16} />
               Kirim Notifikasi
             </button>
-            {record.certificateUrl ? (
-              <a
-                href={record.certificateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700"
-              >
-                <Eye size={16} />
-                Lihat Sertifikat
-              </a>
-            ) : (
-              <button
-                onClick={handleGenerateCertificate}
-                disabled={pending}
-                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50"
-              >
-                <FileText size={16} />
-                {pending ? "Membuat..." : "Buat Sertifikat"}
-              </button>
-            )}
+            <a
+              href={`/api/certificates/${record.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700"
+            >
+              <Eye size={16} />
+              Lihat Sertifikat
+            </a>
           </div>
         </div>
 

@@ -456,15 +456,16 @@ export async function getSlaughterableItems(orderId: number): Promise<
     SELECT 
       oi.id as "orderItemId",
       oi.item_name as "itemName",
-      fi.id as "farmInventoryId",
+      ia.farm_inventory_id as "farmInventoryId",
       fi.eartag_id as "eartagId",
       sr.id as "slaughterRecordId"
     FROM order_items oi
-    LEFT JOIN farm_inventories fi ON fi.order_item_id = oi.id
-    LEFT JOIN slaughter_records sr ON sr.order_item_id = oi.id AND sr.farm_inventory_id = fi.id
+    LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id
+    LEFT JOIN farm_inventories fi ON fi.id = ia.farm_inventory_id
+    LEFT JOIN slaughter_records sr ON sr.order_item_id = oi.id AND sr.farm_inventory_id = ia.farm_inventory_id
     WHERE oi.order_id = ${orderId}
       AND oi.item_type = 'ANIMAL'
-    ORDER BY oi.id
+    ORDER BY oi.id, ia.id
   ` as unknown as SlaughterableItemRow[];
 
   return rows.map((row) => ({

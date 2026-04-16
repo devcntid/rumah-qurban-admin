@@ -42,7 +42,7 @@ export function LogSection({ logs }: { logs: PaymentLogRow[] }) {
       {logs.length === 0 ? (
         <div className="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-8 text-center">
           <Clock size={32} className="mx-auto text-slate-300 mb-2" />
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Belum ada log pembayaran otomatis</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Belum ada log pembayaran otomatis</p>
         </div>
       ) : (
         logs.map((log) => (

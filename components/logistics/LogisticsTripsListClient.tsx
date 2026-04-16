@@ -106,7 +106,7 @@ export default function LogisticsTripsListClient({
             <tbody className="text-xs divide-y divide-slate-100">
               {trips.map((t, index) => (
                 <tr key={t.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-4 text-center text-slate-400 font-mono">
+                  <td className="px-6 py-4 text-center text-slate-600 font-mono">
                     {(page - 1) * pageSize + index + 1}
                   </td>
                   <td className="px-6 py-4">
