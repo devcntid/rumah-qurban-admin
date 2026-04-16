@@ -5,6 +5,7 @@ import {
   listPaymentMethods,
   upsertPaymentMethod,
 } from "@/lib/db/queries/master";
+import { invalidatePaymentMethodsCache } from "@/lib/cache/redis";
 
 export async function GET() {
   const session = await requireSession();
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
   const accountNumber = typeof body?.accountNumber === "string" ? body.accountNumber.trim() : null;
   const accountHolderName = typeof body?.accountHolderName === "string" ? body.accountHolderName.trim() : null;
   const isActive = typeof body?.isActive === "boolean" ? body.isActive : true;
+  const isPublish = typeof body?.isPublish === "boolean" ? body.isPublish : true;
 
   if (!code || !name || !category) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -42,7 +44,9 @@ export async function POST(req: Request) {
     accountNumber: accountNumber || null,
     accountHolderName: accountHolderName || null,
     isActive,
+    isPublish,
   });
+  await invalidatePaymentMethodsCache();
   return NextResponse.json({ ok: true });
 }
 
@@ -55,6 +59,7 @@ export async function DELETE(req: Request) {
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   await deletePaymentMethod(Math.trunc(id));
+  await invalidatePaymentMethodsCache();
   return NextResponse.json({ ok: true });
 }
 

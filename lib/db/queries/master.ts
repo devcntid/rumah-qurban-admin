@@ -268,6 +268,7 @@ export type PaymentMethodRow = {
   bankName: string | null;
   accountNumber: string | null;
   isActive: boolean;
+  isPublish: boolean;
 };
 
 export async function listPaymentMethods() {
@@ -282,7 +283,8 @@ export async function listPaymentMethods() {
       account_holder_name as "accountHolderName",
       bank_name as "bankName",
       account_number as "accountNumber",
-      is_active as "isActive"
+      is_active as "isActive",
+      is_publish as "isPublish"
     FROM payment_methods
     ORDER BY id ASC
   `;
@@ -299,11 +301,12 @@ export async function upsertPaymentMethod(input: {
   bankName?: string | null;
   accountNumber?: string | null;
   isActive?: boolean;
+  isPublish?: boolean;
 }) {
   const sql = getDb();
   if (input.id) {
     await sql`
-      INSERT INTO payment_methods (id, code, name, category, coa_code, account_holder_name, bank_name, account_number, is_active)
+      INSERT INTO payment_methods (id, code, name, category, coa_code, account_holder_name, bank_name, account_number, is_active, is_publish)
       VALUES (
         ${input.id}, 
         ${input.code}, 
@@ -313,7 +316,8 @@ export async function upsertPaymentMethod(input: {
         ${input.accountHolderName ?? null},
         ${input.bankName ?? null},
         ${input.accountNumber ?? null},
-        ${input.isActive ?? true}
+        ${input.isActive ?? true},
+        ${input.isPublish ?? true}
       )
       ON CONFLICT (id) DO UPDATE
       SET code = EXCLUDED.code,
@@ -323,12 +327,13 @@ export async function upsertPaymentMethod(input: {
           account_holder_name = EXCLUDED.account_holder_name,
           bank_name = EXCLUDED.bank_name,
           account_number = EXCLUDED.account_number,
-          is_active = EXCLUDED.is_active
+          is_active = EXCLUDED.is_active,
+          is_publish = EXCLUDED.is_publish
     `;
     return;
   }
   await sql`
-    INSERT INTO payment_methods (code, name, category, coa_code, account_holder_name, bank_name, account_number, is_active)
+    INSERT INTO payment_methods (code, name, category, coa_code, account_holder_name, bank_name, account_number, is_active, is_publish)
     VALUES (
       ${input.code}, 
       ${input.name}, 
@@ -337,7 +342,8 @@ export async function upsertPaymentMethod(input: {
       ${input.accountHolderName ?? null},
       ${input.bankName ?? null},
       ${input.accountNumber ?? null},
-      ${input.isActive ?? true}
+      ${input.isActive ?? true},
+      ${input.isPublish ?? true}
     )
     ON CONFLICT (code) DO UPDATE
     SET name = EXCLUDED.name,
@@ -346,7 +352,8 @@ export async function upsertPaymentMethod(input: {
         account_holder_name = EXCLUDED.account_holder_name,
         bank_name = EXCLUDED.bank_name,
         account_number = EXCLUDED.account_number,
-        is_active = EXCLUDED.is_active
+        is_active = EXCLUDED.is_active,
+        is_publish = EXCLUDED.is_publish
   `;
 }
 

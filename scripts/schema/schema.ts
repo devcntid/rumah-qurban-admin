@@ -67,6 +67,7 @@ export const paymentMethods = pgTable("payment_methods", {
   bankName: varchar("bank_name", { length: 100 }),
   accountNumber: varchar("account_number", { length: 50 }),
   isActive: boolean("is_active").default(true),
+  isPublish: boolean("is_publish").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

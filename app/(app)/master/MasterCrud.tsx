@@ -250,7 +250,7 @@ export function MasterCrud({
         ))}
       </div>
 
-      <div className="col-span-12 md:col-span-9 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="col-span-12 md:col-span-9 bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
         <div className="p-4 border-b flex justify-between items-center bg-slate-50">
           <h3 className="font-bold text-slate-800">Master: {title}</h3>
           <button
@@ -365,41 +365,47 @@ export function MasterCrud({
         )}
 
         {tab === "payments" && (
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="text-xs font-bold uppercase tracking-wide text-slate-700 border-b border-slate-200 bg-slate-50">
-                <th className="p-4 w-16 text-center">No</th>
-                <th className="p-4">ID</th>
-                <th className="p-4">Code</th>
-                <th className="p-4">Nama</th>
-                <th className="p-4">Kategori</th>
-                <th className="p-4">Bank / Rek</th>
-                <th className="p-4">COA</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-center">Aksi</th>
+                <th className="px-3 py-3 w-10 text-center">No</th>
+                <th className="px-3 py-3 w-12">ID</th>
+                <th className="px-3 py-3">Code</th>
+                <th className="px-3 py-3">Nama</th>
+                <th className="px-3 py-3">Kategori</th>
+                <th className="px-3 py-3">Bank / Rek</th>
+                <th className="px-3 py-3">COA</th>
+                <th className="px-3 py-3 w-20">Status</th>
+                <th className="px-3 py-3 w-20">Publish</th>
+                <th className="px-3 py-3 text-center w-36">Aksi</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {(paginatedData as PaymentMethodRow[]).map((p, idx) => (
                 <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="p-4 text-center text-slate-600 font-mono text-xs font-semibold">{startIdx + idx + 1}</td>
-                  <td className="p-4 font-semibold text-slate-800 tabular-nums">{p.id}</td>
-                  <td className="p-4 font-mono text-xs text-blue-600">{p.code}</td>
-                  <td className="p-4 font-semibold text-slate-800">{p.name}</td>
-                  <td className="p-4 text-slate-600">{p.category}</td>
-                  <td className="p-4">
+                  <td className="px-3 py-3 text-center text-slate-600 font-mono text-xs font-semibold">{startIdx + idx + 1}</td>
+                  <td className="px-3 py-3 font-semibold text-slate-800 tabular-nums">{p.id}</td>
+                  <td className="px-3 py-3 font-mono text-xs text-blue-600">{p.code}</td>
+                  <td className="px-3 py-3 font-semibold text-slate-800">{p.name}</td>
+                  <td className="px-3 py-3 text-slate-600">{p.category}</td>
+                  <td className="px-3 py-3">
                     <div className="text-xs font-bold text-slate-800">{p.bankName ?? "-"}</div>
                     <div className="text-[10px] font-mono text-slate-700">{p.accountNumber ?? "-"}</div>
                     {p.accountHolderName && <div className="text-[10px] text-slate-700">a.n. {p.accountHolderName}</div>}
                   </td>
-                  <td className="p-4 font-mono text-xs text-slate-700">{p.coaCode ?? "-"}</td>
-                  <td className="p-4 text-slate-700 font-medium">{p.isActive ? "Aktif" : "Nonaktif"}</td>
-                  <td className="p-4 text-center">
+                  <td className="px-3 py-3 font-mono text-xs text-slate-700">{p.coaCode ?? "-"}</td>
+                  <td className="px-3 py-3 text-slate-700 font-medium text-xs">{p.isActive ? "Aktif" : "Nonaktif"}</td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${p.isPublish ? "bg-green-50 text-green-700 border border-green-200" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
+                      {p.isPublish ? "Ya" : "Tidak"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-center">
                     <div className="inline-flex gap-2">
                       <button
                         type="button"
                         onClick={() => openEdit("payments", p)}
-                        className="px-3 py-1.5 rounded border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
+                        className="px-2.5 py-1.5 rounded border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
                       >
                         Edit
                       </button>
@@ -415,7 +421,7 @@ export function MasterCrud({
                         <button
                           type="submit"
                           disabled={pending}
-                          className="px-3 py-1.5 rounded border border-red-200 bg-red-50 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          className="px-2.5 py-1.5 rounded border border-red-200 bg-red-50 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
                         >
                           Hapus
                         </button>
@@ -1201,6 +1207,7 @@ export function MasterCrud({
                       bankName: String(fd.get("bankName") ?? ""),
                       accountNumber: String(fd.get("accountNumber") ?? ""),
                       isActive: String(fd.get("isActive") ?? "true") === "true",
+                      isPublish: String(fd.get("isPublish") ?? "true") === "true",
                     };
                     await api("/api/master/payment-methods", { method: "POST", json: payload });
                     window.location.reload();
@@ -1291,6 +1298,20 @@ export function MasterCrud({
                     >
                       <option value="true">Aktif</option>
                       <option value="false">Nonaktif</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="pm-isPublish" className="text-xs font-semibold text-slate-800">Publish (User-Facing)</label>
+                    <select
+                      id="pm-isPublish"
+                      name="isPublish"
+                      defaultValue={(row?.isPublish ?? true) ? "true" : "false"}
+                      className={MASTER_FIELD_CLASS}
+                    >
+                      <option value="true">Ya</option>
+                      <option value="false">Tidak</option>
                     </select>
                   </div>
                 </div>

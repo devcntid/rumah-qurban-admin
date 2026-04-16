@@ -55,3 +55,14 @@ export async function invalidateCatalogCache(
   console.log("Invalidating catalog cache keys:", keys);
   await redis.del(...keys);
 }
+
+export const PAYMENT_METHODS_CACHE_KEY = "payment_methods:all";
+
+export async function invalidatePaymentMethodsCache() {
+  if (!redis) {
+    console.warn("Redis not configured, skipping cache invalidation");
+    return;
+  }
+
+  await redis.del(PAYMENT_METHODS_CACHE_KEY);
+}
