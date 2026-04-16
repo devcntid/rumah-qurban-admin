@@ -14,11 +14,17 @@ import {
 import { invalidateCatalogCache } from "@/lib/cache/redis";
 
 const catalogOfferSchema = z.object({
-  id: z.number().optional(),
-  productId: z.number("Produk wajib dipilih"),
-  animalVariantId: z.number("Varian hewan wajib dipilih"),
-  branchId: z.number().nullable(),
-  vendorId: z.number().nullable(),
+  id: z.coerce.number().optional(),
+  productId: z.coerce.number({ message: "Produk wajib dipilih" }),
+  animalVariantId: z.coerce.number({ message: "Varian hewan wajib dipilih" }),
+  branchId: z.preprocess(
+    (v) => (v === null || v === undefined || v === "" ? null : Number(v)),
+    z.number().nullable()
+  ),
+  vendorId: z.preprocess(
+    (v) => (v === null || v === undefined || v === "" ? null : Number(v)),
+    z.number().nullable()
+  ),
   displayName: z.string().min(1, "Nama penawaran wajib diisi"),
   subType: z.string().nullable(),
   skuCode: z.string().nullable(),
