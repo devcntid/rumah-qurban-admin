@@ -92,6 +92,13 @@
       "when": 1776537600000,
       "tag": "0012_add_payment_methods_is_publish",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776624000000,
+      "tag": "0013_add_slaughter_schedules",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db/client";
 import { getNotifTemplateById } from "@/lib/db/queries/notif-templates";
 import { getSlaughterRecordByFarmInventoryId } from "@/lib/db/queries/slaughter-records";
+import { getScheduleByOrderItemId } from "@/lib/db/queries/slaughter-schedules";
 
 export type OrderData = {
   orderId: number;
@@ -116,6 +117,20 @@ export async function getOrderDataForNotification(orderId: number): Promise<Orde
         year: "numeric",
       });
       slaughterLocation = slaughterRecord.slaughterLocation || undefined;
+    }
+  }
+
+  if (!slaughterDate && item?.orderItemId) {
+    const schedule = await getScheduleByOrderItemId(item.orderItemId);
+    if (schedule) {
+      slaughterDate = new Date(schedule.scheduledDate + "T00:00:00").toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+      if (!slaughterLocation) {
+        slaughterLocation = schedule.locationName;
+      }
     }
   }
 

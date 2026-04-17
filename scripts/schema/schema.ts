@@ -242,11 +242,16 @@ export const orderItems = pgTable(
     unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
     totalPrice: numeric("total_price", { precision: 15, scale: 2 }).notNull(),
     coaCode: varchar("coa_code", { length: 50 }),
+    slaughterScheduleId: bigint("slaughter_schedule_id", { mode: "number" }).references(
+      () => slaughterSchedules.id,
+      { onDelete: "set null" }
+    ),
   },
   (t) => [
     index("idx_order_items_order_id").on(t.orderId),
     index("idx_order_items_catalog_offer_id").on(t.catalogOfferId),
     index("idx_order_items_service_id").on(t.serviceId),
+    index("idx_order_items_slaughter_schedule").on(t.slaughterScheduleId),
   ]
 );
 
@@ -503,6 +508,33 @@ export const adminUsers = pgTable(
     uniqueIndex("unique_idx_admin_users_email").on(t.email),
     index("idx_admin_users_branch").on(t.branchId),
     index("idx_admin_users_role").on(t.role),
+  ]
+);
+
+export const slaughterSchedules = pgTable(
+  "slaughter_schedules",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    branchId: bigint("branch_id", { mode: "number" })
+      .notNull()
+      .references(() => branches.id),
+    scheduledDate: date("scheduled_date").notNull(),
+    locationName: varchar("location_name", { length: 255 }).notNull(),
+    locationLat: decimal("location_lat", { precision: 10, scale: 8 }),
+    locationLng: decimal("location_lng", { precision: 11, scale: 8 }),
+    notes: text("notes"),
+    status: varchar("status", { length: 50 }).default("PLANNED"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("slaughter_schedules_branch_date_location_uniq").on(
+      t.branchId,
+      t.scheduledDate,
+      t.locationName
+    ),
+    index("idx_slaughter_schedules_branch").on(t.branchId),
+    index("idx_slaughter_schedules_date").on(t.scheduledDate),
   ]
 );
 

@@ -1011,7 +1011,7 @@ Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:10:00')
     await sql`
       INSERT INTO admin_users (id, email, password_hash, full_name, role, branch_id, is_active)
       VALUES
-        (1, 'superadmin@rumahqurban.id', ${superadminHash}, 'Super Administrator', 'SUPERADMIN', NULL, TRUE),
+        (1, 'irvan@cnt.id', ${superadminHash}, 'Super Administrator', 'SUPERADMIN', NULL, TRUE),
         (2, 'admin.bandung@rumahqurban.id', ${adminBandungHash}, 'Admin Bandung Raya', 'ADMIN_BRANCH', ${bandungId}, TRUE)
       ON CONFLICT (id) DO UPDATE
       SET email = EXCLUDED.email,
@@ -1028,6 +1028,33 @@ Mengalirkan Pahala Sampai Pelosok', '2026-05-20 10:10:00')
         CASE WHEN EXISTS (SELECT 1 FROM admin_users LIMIT 1)
           THEN (SELECT MAX(id) FROM admin_users) ELSE 1 END,
         EXISTS (SELECT 1 FROM admin_users LIMIT 1)
+      )
+    `;
+
+    console.log("Seeding Slaughter Schedules...");
+    await sql`
+      INSERT INTO slaughter_schedules (id, branch_id, scheduled_date, location_name, notes, status)
+      VALUES
+        (1, ${bandungId}, '2026-06-17', 'Desa Cimenyan - Kabupaten Bandung', 'Hari Raya Idul Adha 1447H', 'PLANNED'),
+        (2, ${bandungId}, '2026-06-18', 'Desa Cimenyan - Kabupaten Bandung', 'Hari Tasyrik ke-1', 'PLANNED'),
+        (3, ${brebesId}, '2026-06-17', 'Desa Dukuhturi - Kabupaten Brebes', 'Hari Raya Idul Adha 1447H', 'PLANNED'),
+        (4, ${brebesId}, '2026-06-18', 'Desa Dukuhturi - Kabupaten Brebes', 'Hari Tasyrik ke-1', 'PLANNED'),
+        (5, ${kupangId}, '2026-06-17', 'Desa Oesapa - Kota Kupang', 'Hari Raya Idul Adha 1447H', 'PLANNED'),
+        (6, ${bojonegoroId}, '2026-06-17', 'Desa Kadipaten - Kabupaten Bojonegoro', 'Hari Raya Idul Adha 1447H', 'PLANNED')
+      ON CONFLICT (id) DO UPDATE
+      SET branch_id = EXCLUDED.branch_id,
+          scheduled_date = EXCLUDED.scheduled_date,
+          location_name = EXCLUDED.location_name,
+          notes = EXCLUDED.notes,
+          status = EXCLUDED.status
+    `;
+
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('slaughter_schedules', 'id'),
+        CASE WHEN EXISTS (SELECT 1 FROM slaughter_schedules LIMIT 1)
+          THEN (SELECT MAX(id) FROM slaughter_schedules) ELSE 1 END,
+        EXISTS (SELECT 1 FROM slaughter_schedules LIMIT 1)
       )
     `;
 

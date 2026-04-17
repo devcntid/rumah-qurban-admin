@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   Activity,
   Bell,
+  CalendarClock,
   ClipboardList,
   Database,
   HelpCircle,
@@ -29,6 +30,7 @@ export type MenuItem = {
     | "finance"
     | "farm"
     | "slaughter"
+    | "slaughter-schedules"
     | "logistics"
     | "pricing"
     | "master"
@@ -90,6 +92,12 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Data Penyembelihan",
     href: "/slaughter",
     icon: <Scissors size={20} />,
+  },
+  {
+    id: "slaughter-schedules",
+    label: "Jadwal Penyembelihan",
+    href: "/slaughter-schedules",
+    icon: <CalendarClock size={20} />,
   },
   {
     id: "logistics",
