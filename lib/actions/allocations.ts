@@ -6,7 +6,22 @@ import { revalidatePath } from "next/cache";
 export async function allocateAnimalAction(inventoryId: number, orderItemId: number) {
   const sql = getDb();
   try {
-    // 1. Create allocation
+    const capacityCheck = (await sql`
+      SELECT oi.quantity,
+             COUNT(ia.id)::int as allocated
+      FROM order_items oi
+      LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id
+      WHERE oi.id = ${orderItemId}
+      GROUP BY oi.quantity
+    `) as { quantity: number; allocated: number }[];
+
+    if (capacityCheck.length > 0) {
+      const { quantity, allocated } = capacityCheck[0];
+      if (allocated >= quantity) {
+        return { success: false, error: `Kuota sudah penuh (${allocated}/${quantity} hewan terpasang)` };
+      }
+    }
+
     await sql`
       INSERT INTO inventory_allocations (order_item_id, farm_inventory_id, allocated_at)
       VALUES (${orderItemId}, ${inventoryId}, NOW())
@@ -71,7 +86,26 @@ export async function deallocateAnimalAction(allocationId: number) {
 export async function bulkAllocateAction(inventoryIds: number[], orderItemId: number) {
   const sql = getDb();
   try {
-    // Run sequentially for each ID
+    const capacityCheck = (await sql`
+      SELECT oi.quantity,
+             COUNT(ia.id)::int as allocated
+      FROM order_items oi
+      LEFT JOIN inventory_allocations ia ON ia.order_item_id = oi.id
+      WHERE oi.id = ${orderItemId}
+      GROUP BY oi.quantity
+    `) as { quantity: number; allocated: number }[];
+
+    if (capacityCheck.length > 0) {
+      const { quantity, allocated } = capacityCheck[0];
+      const remaining = quantity - allocated;
+      if (remaining <= 0) {
+        return { success: false, error: `Kuota sudah penuh (${allocated}/${quantity} hewan terpasang)` };
+      }
+      if (inventoryIds.length > remaining) {
+        return { success: false, error: `Hanya bisa menambah ${remaining} hewan lagi (${allocated}/${quantity} sudah terpasang)` };
+      }
+    }
+
     for (const id of inventoryIds) {
       await sql`
         INSERT INTO inventory_allocations (order_item_id, farm_inventory_id, allocated_at)

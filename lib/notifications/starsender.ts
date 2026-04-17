@@ -41,7 +41,7 @@ export async function sendWhatsAppMessage(
   const payload: StarSenderPayload = {
     messageType: "text",
     to: normalizedPhone,
-    body: `<p>${message.replace(/\n/g, "<br>")}</p>`,
+    body: message,
   };
 
   try {

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { orderId, templateId, customVariables } = body;
+    const { orderId, templateId, customVariables, preview } = body;
 
     if (!orderId || !templateId) {
       return NextResponse.json(
@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
         { error: compiled.error || "Failed to compile message" },
         { status: 400 }
       );
+    }
+
+    if (preview) {
+      return NextResponse.json({
+        success: true,
+        message: compiled.message,
+      });
     }
 
     const logId = await createNotifLog({

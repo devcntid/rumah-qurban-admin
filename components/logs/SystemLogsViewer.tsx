@@ -139,7 +139,7 @@ export function SystemLogsViewer() {
                         <span className="flex items-center gap-1.5"><Terminal size={12} /> Payload (Data Masuk)</span>
                         <CopyButton content={JSON.stringify(typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload, null, 2)} />
                       </div>
-                      <pre className="bg-[#0f172a] text-blue-300 p-4 rounded-xl overflow-x-auto custom-scrollbar-light border border-slate-800 shadow-inner">
+                      <pre className="bg-[#0f172a] text-blue-300 p-4 rounded-xl whitespace-pre-wrap break-words border border-slate-800 shadow-inner text-xs leading-relaxed">
                         {(() => {
                             try {
                                 const p = typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload;
@@ -153,7 +153,7 @@ export function SystemLogsViewer() {
                         <span className="flex items-center gap-1.5"><Terminal size={12} /> Response (Respons Sistem)</span>
                         <CopyButton content={JSON.stringify(typeof log.response === 'string' ? JSON.parse(log.response) : log.response, null, 2)} />
                       </div>
-                      <pre className="bg-[#0f172a] text-green-300 p-4 rounded-xl overflow-x-auto custom-scrollbar-light border border-slate-800 shadow-inner">
+                      <pre className="bg-[#0f172a] text-green-300 p-4 rounded-xl whitespace-pre-wrap break-words border border-slate-800 shadow-inner text-xs leading-relaxed">
                         {(() => {
                             try {
                                 const r = typeof log.response === 'string' ? JSON.parse(log.response) : log.response;

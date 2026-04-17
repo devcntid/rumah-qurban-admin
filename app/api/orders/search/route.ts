@@ -4,39 +4,57 @@ import { getDb } from "@/lib/db/client";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get("q") || "";
+    const q = searchParams.get("q") || searchParams.get("term") || "";
     const branch = searchParams.get("branch") || "";
+    const branchId = searchParams.get("branchId") || "";
     const status = searchParams.get("status") || "";
-    const dateFrom = searchParams.get("dateFrom") || "";
-    const dateTo = searchParams.get("dateTo") || "";
+    const dateFrom = searchParams.get("dateFrom") || searchParams.get("startDate") || "";
+    const dateTo = searchParams.get("dateTo") || searchParams.get("endDate") || "";
+    const pageSize = Math.min(Number(searchParams.get("pageSize")) || 20, 500);
+    const sentTemplateId = searchParams.get("sentTemplateId") || "";
+    const notSentTemplateId = searchParams.get("notSentTemplateId") || "";
 
     const sql = getDb();
 
-    // Build filters
     const qPattern = `%${q}%`;
     const branchPattern = `%${branch}%`;
-    /** PG tetap mem-parse semua parameter; `''::date` error — pakai placeholder aman bila filter off */
     const dateFromBound = dateFrom === "" ? "1970-01-01" : dateFrom;
     const dateToBound = dateTo === "" ? "2099-12-31" : dateTo;
+    const sentTplId = sentTemplateId === "" ? 0 : Number(sentTemplateId);
+    const notSentTplId = notSentTemplateId === "" ? 0 : Number(notSentTemplateId);
 
-    // Query with all filters applied dynamically
     const orders = await sql`
       SELECT 
         o.id, 
         o.invoice_number as "invoiceNumber", 
         o.customer_name as "customerName",
+        o.customer_phone as "customerPhone",
         o.status,
+        o.created_at as "createdAt",
         b.name as "branchName"
       FROM orders o
       JOIN branches b ON b.id = o.branch_id
       WHERE 
-        (${q === ""} OR o.invoice_number ILIKE ${qPattern} OR o.customer_name ILIKE ${qPattern})
+        (${q === ""} OR o.invoice_number ILIKE ${qPattern} OR o.customer_name ILIKE ${qPattern} OR o.customer_phone ILIKE ${qPattern})
         AND (${branch === ""} OR b.name ILIKE ${branchPattern})
+        AND (${branchId === ""} OR o.branch_id = ${branchId === "" ? 0 : Number(branchId)})
         AND (${status === ""} OR o.status = ${status})
         AND (${dateFrom === ""} OR o.created_at >= ${dateFromBound}::date)
         AND (${dateTo === ""} OR o.created_at <= ${dateToBound}::date + INTERVAL '1 day')
+        AND (${sentTemplateId === ""} OR EXISTS (
+          SELECT 1 FROM notif_logs nl_sent
+          WHERE nl_sent.order_id = o.id
+            AND nl_sent.template_id = ${sentTplId}
+            AND nl_sent.status = 'SENT'
+        ))
+        AND (${notSentTemplateId === ""} OR NOT EXISTS (
+          SELECT 1 FROM notif_logs nl_not
+          WHERE nl_not.order_id = o.id
+            AND nl_not.template_id = ${notSentTplId}
+            AND nl_not.status = 'SENT'
+        ))
       ORDER BY o.created_at DESC
-      LIMIT 20
+      LIMIT ${pageSize}
     `;
 
     // Fetch items for each order with allocation info

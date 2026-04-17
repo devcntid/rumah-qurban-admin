@@ -1,41 +1,45 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { X, Clock, AlertCircle, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { Modal } from "@/components/ui/Modal";
+import { PaidButton } from "./PaidButton";
 import type { PaymentReceiptRow } from "@/lib/db/queries/transactions";
 
 export function ReceiptSection({
   transactionId,
   initialReceipts,
+  orderId,
+  transactionStatus,
 }: {
   transactionId: number;
   initialReceipts: PaymentReceiptRow[];
+  orderId: number | null;
+  transactionStatus: string;
 }) {
   const [receipts, setReceipts] = useState(initialReceipts);
   const [loading, setLoading] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const handleVerify = async (receiptId: number, status: "APPROVED" | "REJECTED") => {
-    const notes = status === "REJECTED" ? prompt("Masukkan alasan penolakan:") : null;
-    if (status === "REJECTED" && notes === null) return;
+  const handleReject = async (receiptId: number) => {
+    const notes = prompt("Masukkan alasan penolakan:");
+    if (notes === null) return;
 
     setLoading(receiptId);
     try {
       await api(`/api/transactions/receipts/verify`, {
         method: "POST",
-        json: { receiptId, status, notes },
+        json: { receiptId, status: "REJECTED", notes },
       });
-      // Refresh receipts
       const updated = receipts.map((r) =>
         r.id === receiptId
-          ? { ...r, status, verifierNotes: notes, verifiedAt: new Date() }
+          ? { ...r, status: "REJECTED" as const, verifierNotes: notes, verifiedAt: new Date() }
           : r
       );
       setReceipts(updated);
     } catch (err) {
-      console.error("Failed to verify receipt", err);
+      console.error("Failed to reject receipt", err);
     } finally {
       setLoading(null);
     }
@@ -96,14 +100,7 @@ export function ReceiptSection({
                   {r.status === "PENDING" && (
                     <div className="flex gap-3">
                       <button
-                        onClick={() => handleVerify(r.id, "APPROVED")}
-                        disabled={loading !== null}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-green-900/10 hover:bg-green-700 transition-all flex items-center justify-center gap-2"
-                      >
-                        <Check size={14} /> Teruskan (Approve)
-                      </button>
-                      <button
-                        onClick={() => handleVerify(r.id, "REJECTED")}
+                        onClick={() => handleReject(r.id)}
                         disabled={loading !== null}
                         className="flex-1 bg-white border border-red-200 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-50 transition-all flex items-center justify-center gap-2"
                       >
@@ -122,6 +119,19 @@ export function ReceiptSection({
             </div>
           </div>
         ))
+      )}
+
+      {/* Tombol Tandai Lunas + Kirim WA */}
+      {transactionStatus !== "PAID" && orderId && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h5 className="font-black text-slate-800 text-sm uppercase tracking-tight">Konfirmasi Pembayaran</h5>
+              <p className="text-[11px] text-slate-500 font-medium mt-1">Tandai transaksi ini sebagai lunas dan kirim notifikasi WhatsApp ke pelanggan.</p>
+            </div>
+            <PaidButton transactionId={transactionId} />
+          </div>
+        </div>
       )}
 
       {/* Image Preview Modal */}

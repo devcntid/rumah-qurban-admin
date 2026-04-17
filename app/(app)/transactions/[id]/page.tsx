@@ -10,7 +10,6 @@ import { ReceiptSection } from "./ReceiptSection";
 import { LogSection } from "./LogSection";
 
 import { LinkedOrderCard } from "./LinkedOrderCard";
-import { PaidButton } from "./PaidButton";
 
 function formatIDR(value: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -53,9 +52,6 @@ export default async function TransactionDetailPage({
             <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${statusColors[transaction.status] || "bg-slate-100 text-slate-700"}`}>
               {transaction.status}
             </span>
-            {transaction.status !== "PAID" && transaction.orderId && (
-              <PaidButton transactionId={transaction.id} />
-            )}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 mt-1">
             <p className="text-blue-600 text-xs font-black uppercase flex items-center gap-1.5">
@@ -118,7 +114,12 @@ export default async function TransactionDetailPage({
                   <FileText size={18} className="text-red-500" />
                   Bukti Transfer Pelanggan
                 </h4>
-                <ReceiptSection transactionId={transaction.id} initialReceipts={transaction.receipts} />
+                <ReceiptSection 
+                  transactionId={transaction.id} 
+                  initialReceipts={transaction.receipts} 
+                  orderId={transaction.orderId}
+                  transactionStatus={transaction.status}
+                />
               </>
             ) : (
               <>
