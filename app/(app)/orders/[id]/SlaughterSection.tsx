@@ -15,7 +15,6 @@ import {
   ChevronUp,
   Upload,
   X,
-  Image as ImageIcon,
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -456,9 +455,12 @@ function SlaughterItemRow({
               <div className="mt-2 flex flex-wrap gap-2">
                 {selectedFiles.map((file, index) => (
                   <div key={`${file.name}-${index}`} className="relative group">
-                    <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
-                      <ImageIcon size={20} className="text-slate-300" />
-                    </div>
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-16 h-16 rounded-lg border border-slate-200 object-cover"
+                      onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                    />
                     <div className="absolute -top-1 -right-1">
                       <button
                         type="button"

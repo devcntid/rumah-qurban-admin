@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, User, Camera,
-  Trash2, Plus, Save, Send, Eye, Download, Loader2, X
+  Trash2, Plus, Save, Send, Eye, Download, Loader2, X, Upload
 } from "lucide-react";
 import { api, ApiException } from "@/lib/api/client";
 import { Modal } from "@/components/ui/Modal";
@@ -31,6 +31,7 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const [editData, setEditData] = useState({
     slaughteredAt: record.slaughteredAt ? new Date(record.slaughteredAt).toISOString().slice(0, 16) : "",
@@ -39,9 +40,53 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
     performedBy: record.performedBy || "",
   });
 
+  const removePendingFile = useCallback((index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
+    if (files.length === 0) return;
+    setPendingFiles((prev) => [...prev, ...files]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSaveChanges = async () => {
     startTransition(async () => {
       try {
+        let finalPhotos = photos;
+
+        if (pendingFiles.length > 0) {
+          setUploading(true);
+          const newPhotos: DocumentationPhoto[] = [];
+
+          for (const file of pendingFiles) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("filename", `slaughter-${record.id}-${Date.now()}-${file.name}`);
+
+            const uploadRes = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              newPhotos.push({
+                url: uploadData.url,
+                uploadedAt: new Date().toISOString(),
+              });
+            }
+          }
+
+          finalPhotos = [...photos, ...newPhotos];
+          setPhotos(finalPhotos);
+          setPendingFiles([]);
+          setUploading(false);
+        }
+
         await api("/api/slaughter-records", {
           method: "POST",
           json: {
@@ -50,12 +95,13 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
             slaughterLocation: editData.location,
             notes: editData.notes,
             performedBy: editData.performedBy,
-            documentationPhotos: photos,
+            documentationPhotos: finalPhotos,
           },
         });
         toast.success("Perubahan berhasil disimpan");
         router.refresh();
       } catch (error) {
+        setUploading(false);
         if (error instanceof ApiException) {
           toast.error(error.message);
         } else {
@@ -63,58 +109,6 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
         }
       }
     });
-  };
-
-  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
-    if (files.length === 0) return;
-
-    setUploading(true);
-    try {
-      const newPhotos: DocumentationPhoto[] = [];
-      
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("filename", `slaughter-${record.id}-${Date.now()}-${file.name}`);
-        
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          newPhotos.push({
-            url: uploadData.url,
-            uploadedAt: new Date().toISOString(),
-          });
-        }
-      }
-
-      if (newPhotos.length > 0) {
-        const updatedPhotos = [...photos, ...newPhotos];
-        setPhotos(updatedPhotos);
-        
-        await api("/api/slaughter-records", {
-          method: "POST",
-          json: {
-            id: record.id,
-            documentationPhotos: updatedPhotos,
-          },
-        });
-        
-        toast.success(`${newPhotos.length} foto berhasil diupload`);
-        router.refresh();
-      }
-    } catch (error) {
-      toast.error("Gagal mengupload foto");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
   };
 
   const confirmDeletePhoto = (index: number) => {
@@ -314,11 +308,27 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
 
                 <button
                   onClick={handleSaveChanges}
-                  disabled={pending}
+                  disabled={pending || uploading}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#102a43] text-white rounded-lg text-sm font-bold hover:bg-slate-800 disabled:opacity-50"
                 >
-                  <Save size={16} />
-                  {pending ? "Menyimpan..." : "Simpan Perubahan"}
+                  {uploading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Mengupload foto...
+                    </>
+                  ) : pending ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      {pendingFiles.length > 0
+                        ? `Simpan Perubahan & Upload ${pendingFiles.length} Foto`
+                        : "Simpan Perubahan"}
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -331,36 +341,31 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <Camera size={18} />
                   Foto Dokumentasi ({photos.length})
+                  {pendingFiles.length > 0 && (
+                    <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                      +{pendingFiles.length} belum tersimpan
+                    </span>
+                  )}
                 </h3>
                 <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 cursor-pointer">
-                  {uploading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Mengupload...
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} />
-                      Tambah Foto
-                    </>
-                  )}
+                  <Plus size={16} />
+                  Tambah Foto
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={handleUploadPhoto}
+                    onChange={handleFileSelect}
                     className="hidden"
-                    disabled={uploading}
                   />
                 </label>
               </div>
 
-              {photos.length === 0 ? (
+              {photos.length === 0 && pendingFiles.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
                   <Camera size={48} className="mx-auto text-slate-300 mb-3" />
                   <p>Belum ada foto dokumentasi</p>
-                  <p className="text-sm">Klik "Tambah Foto" untuk mengupload</p>
+                  <p className="text-sm">Klik &quot;Tambah Foto&quot; untuk memilih gambar</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -390,6 +395,7 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
                         <button
                           onClick={() => confirmDeletePhoto(idx)}
                           className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600"
+                          title="Hapus foto"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -407,6 +413,48 @@ export default function SlaughterDetailClient({ record, templates }: Props) {
                       </div>
                     </div>
                   ))}
+                  {pendingFiles.map((file, idx) => (
+                    <div key={`pending-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border-2 border-dashed border-amber-300 bg-amber-50/50">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                        onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                      />
+                      <div className="absolute top-2 left-2">
+                        <span className="text-[9px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Upload size={8} />
+                          Belum tersimpan
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => removePendingFile(idx)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Hapus foto"
+                      >
+                        <X size={14} />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                        <p className="text-white text-[10px] font-medium truncate">
+                          {file.name}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {pendingFiles.length > 0 && (
+                <div className="mt-4 flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-700 font-medium">
+                    {pendingFiles.length} foto baru dipilih. Klik &quot;Simpan Perubahan&quot; untuk mengupload dan menyimpan.
+                  </p>
+                  <button
+                    onClick={() => setPendingFiles([])}
+                    className="text-xs text-amber-600 font-bold hover:text-amber-800"
+                  >
+                    Hapus Semua
+                  </button>
                 </div>
               )}
             </div>
