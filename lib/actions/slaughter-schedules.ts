@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
+import { flushRedisCache } from "@/lib/cache/redis";
 import {
   createSlaughterSchedule,
   updateSlaughterSchedule,
@@ -19,6 +20,7 @@ export async function createScheduleAction(
 
   try {
     const id = await createSlaughterSchedule(data);
+    await flushRedisCache();
     revalidatePath("/slaughter-schedules");
     return { success: true, id };
   } catch (error) {
@@ -40,6 +42,7 @@ export async function updateScheduleAction(
 
   try {
     await updateSlaughterSchedule(id, data);
+    await flushRedisCache();
     revalidatePath("/slaughter-schedules");
     return { success: true };
   } catch (error) {
@@ -60,6 +63,7 @@ export async function updateScheduleStatusAction(
 
   try {
     await updateSlaughterSchedule(id, { status });
+    await flushRedisCache();
     revalidatePath("/slaughter-schedules");
     return { success: true };
   } catch (error) {
@@ -79,6 +83,7 @@ export async function deleteScheduleAction(
 
   try {
     await deleteSlaughterSchedule(id);
+    await flushRedisCache();
     revalidatePath("/slaughter-schedules");
     return { success: true };
   } catch (error) {
@@ -99,6 +104,7 @@ export async function assignItemsAction(
 
   try {
     await assignOrderItemsToSchedule(scheduleId, orderItemIds);
+    await flushRedisCache();
     revalidatePath("/slaughter-schedules");
     return { success: true };
   } catch (error) {
@@ -118,6 +124,7 @@ export async function unassignItemsAction(
 
   try {
     await unassignOrderItemsFromSchedule(orderItemIds);
+    await flushRedisCache();
     revalidatePath("/slaughter-schedules");
     return { success: true };
   } catch (error) {

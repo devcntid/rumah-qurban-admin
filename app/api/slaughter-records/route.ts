@@ -9,6 +9,7 @@ import {
   getSlaughterableItems,
 } from "@/lib/db/queries/slaughter-records";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET(request: NextRequest) {
   const session = await requireSession();
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
         notes,
         performedBy,
       });
+      await flushRedisCache();
       revalidatePath(`/orders`);
       return NextResponse.json({
         success: true,
@@ -134,6 +136,7 @@ export async function POST(request: NextRequest) {
       performedBy,
     });
 
+    await flushRedisCache();
     revalidatePath(`/orders`);
 
     return NextResponse.json({

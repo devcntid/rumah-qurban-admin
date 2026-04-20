@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { put } from "@vercel/blob";
 import { getSession } from "@/lib/auth/session";
+import { flushRedisCache } from "@/lib/cache/redis";
 import {
   createSlaughterRecord,
   updateSlaughterRecord,
@@ -39,6 +40,7 @@ export async function recordSlaughterAction(data: {
       documentationPhotos: [],
     });
 
+    await flushRedisCache();
     revalidatePath("/orders");
 
     return { success: true, slaughterRecordId: recordId };
@@ -77,6 +79,7 @@ export async function updateSlaughterAction(
       performedBy: data.performedBy,
     });
 
+    await flushRedisCache();
     revalidatePath("/orders");
 
     return { success: true };
@@ -136,6 +139,7 @@ export async function uploadSlaughterPhotosAction(
     }
 
     await addPhotosToRecord(slaughterRecordId, uploadedPhotos);
+    await flushRedisCache();
     revalidatePath("/orders");
 
     return { success: true, uploadedUrls };
@@ -202,6 +206,7 @@ export async function recordSlaughterWithPhotosAction(
       documentationPhotos: uploadedPhotos,
     });
 
+    await flushRedisCache();
     revalidatePath("/orders");
 
     return { success: true, slaughterRecordId: recordId };

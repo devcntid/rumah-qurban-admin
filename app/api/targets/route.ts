@@ -7,6 +7,7 @@ import {
   listSalesTargets,
   upsertSalesTarget,
 } from "@/lib/db/queries/targets";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET(req: Request) {
   const session = await requireSession();
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
     targetHpp: Math.max(0, targetHpp || 0),
     notes: notes || null,
   });
+  await flushRedisCache();
 
   return NextResponse.json({ ok: true });
 }
@@ -79,6 +81,7 @@ export async function DELETE(req: Request) {
   }
 
   await deleteSalesTarget(Math.trunc(id));
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/app/api/_utils/session";
 import { updateAdminPassword } from "@/lib/db/queries/admin-users";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function POST(req: Request) {
   const session = await requireSession();
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(newPassword);
   await updateAdminPassword(userId, passwordHash);
+  await flushRedisCache();
 
   return NextResponse.json({ ok: true });
 }

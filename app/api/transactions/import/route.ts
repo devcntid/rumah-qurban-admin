@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { upsertTransaction } from "@/lib/db/queries/transactions";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function POST(req: Request) {
   try {
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
       }
     }
 
+    await flushRedisCache();
     return NextResponse.json({ success: true, count: results.filter(r => r.status === 'success').length, details: results });
   } catch (err) {
     console.error("Import transactions error", err);

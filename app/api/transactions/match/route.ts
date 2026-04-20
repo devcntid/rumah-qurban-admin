@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { matchTransactionToOrder } from "@/lib/db/queries/transactions";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +11,7 @@ export async function POST(req: Request) {
     }
 
     await matchTransactionToOrder(Number(transactionId), Number(orderId));
+    await flushRedisCache();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Match transaction error", err);

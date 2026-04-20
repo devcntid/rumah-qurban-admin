@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/app/api/_utils/session";
 import { markTransactionAsPaid } from "@/lib/db/queries/transactions";
+import { flushRedisCache } from "@/lib/cache/redis";
 import { getNotifTemplateByName } from "@/lib/db/queries/notif-templates";
 import { compileNotificationMessage } from "@/lib/notifications/template-engine";
 import { sendWhatsAppMessage } from "@/lib/notifications/starsender";
@@ -69,6 +70,8 @@ export async function POST(req: Request) {
       console.error("WhatsApp notification error (payment still processed):", notifErr);
       waError = notifErr instanceof Error ? notifErr.message : "Error saat mengirim notifikasi";
     }
+
+    await flushRedisCache();
 
     return NextResponse.json({
       success: true,

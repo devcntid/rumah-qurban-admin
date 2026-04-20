@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/app/api/_utils/session";
 import { deleteBranch, listBranches, upsertBranch } from "@/lib/db/queries/master";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET() {
   const session = await requireSession();
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ error: "Invalid name" }, { status: 400 });
 
   await upsertBranch({ id, name, coaCode: coaCode || null, isActive });
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }
 
@@ -34,5 +36,6 @@ export async function DELETE(req: Request) {
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   await deleteBranch(Math.trunc(id));
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }

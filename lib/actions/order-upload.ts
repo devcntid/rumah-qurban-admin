@@ -2,6 +2,7 @@
 
 import { getDb } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 import * as XLSX from "xlsx";
 import { 
   getBranchLookupMap, 
@@ -220,6 +221,7 @@ export async function uploadOrdersAction(fileBuffer: ArrayBuffer) {
     }
   }
 
+  await flushRedisCache();
   revalidatePath("/orders");
   
   return {

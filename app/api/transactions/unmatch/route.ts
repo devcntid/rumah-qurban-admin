@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { unmatchTransaction } from "@/lib/db/queries/transactions";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +10,7 @@ export async function POST(req: Request) {
     }
 
     await unmatchTransaction(transactionId);
+    await flushRedisCache();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Failed to unmatch transaction", err);

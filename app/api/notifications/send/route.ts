@@ -3,6 +3,7 @@ import { requireSession } from "@/app/api/_utils/session";
 import { compileNotificationMessage } from "@/lib/notifications/template-engine";
 import { sendWhatsAppMessage } from "@/lib/notifications/starsender";
 import { createNotifLog, updateNotifLogStatus } from "@/lib/db/queries/notif-logs";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function POST(request: NextRequest) {
   const session = await requireSession();
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await flushRedisCache();
 
     return NextResponse.json({
       success: true,

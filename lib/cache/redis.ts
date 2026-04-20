@@ -15,17 +15,16 @@ export const FAQ_BY_PRODUCT_KEY = (productId: number) =>
   `faqs:product:${productId}`;
 export const FAQ_CACHE_TTL = 3600;
 
-export async function invalidateFaqCache(productId?: number) {
+export async function flushRedisCache() {
   if (!redis) {
-    console.warn("Redis not configured, skipping cache invalidation");
+    console.warn("Redis not configured, skipping cache flush");
     return;
   }
+  await redis.flushall();
+}
 
-  const keys = [FAQ_CACHE_KEY];
-  if (productId) {
-    keys.push(FAQ_BY_PRODUCT_KEY(productId));
-  }
-  await redis.del(...keys);
+export async function invalidateFaqCache(_productId?: number) {
+  await flushRedisCache();
 }
 
 export const CATALOG_CACHE_KEY = "catalog:all";
@@ -36,33 +35,14 @@ export const CATALOG_BY_PRODUCT_KEY = (productCode: string) =>
 export const CATALOG_CACHE_TTL = 3600;
 
 export async function invalidateCatalogCache(
-  branchId?: number,
-  productCode?: string
+  _branchId?: number,
+  _productCode?: string
 ) {
-  if (!redis) {
-    console.warn("Redis not configured, skipping cache invalidation");
-    return;
-  }
-
-  const keys = [CATALOG_CACHE_KEY];
-  if (branchId) {
-    keys.push(CATALOG_BY_BRANCH_KEY(branchId));
-  }
-  if (productCode) {
-    keys.push(CATALOG_BY_PRODUCT_KEY(productCode));
-  }
-  
-  console.log("Invalidating catalog cache keys:", keys);
-  await redis.del(...keys);
+  await flushRedisCache();
 }
 
 export const PAYMENT_METHODS_CACHE_KEY = "payment_methods:all";
 
 export async function invalidatePaymentMethodsCache() {
-  if (!redis) {
-    console.warn("Redis not configured, skipping cache invalidation");
-    return;
-  }
-
-  await redis.del(PAYMENT_METHODS_CACHE_KEY);
+  await flushRedisCache();
 }

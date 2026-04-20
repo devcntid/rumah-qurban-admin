@@ -6,7 +6,7 @@ import {
   upsertFaq,
   deleteFaq,
 } from "@/lib/db/queries/faqs";
-import { invalidateFaqCache } from "@/lib/cache/redis";
+import { flushRedisCache } from "@/lib/cache/redis";
 import { revalidatePath } from "next/cache";
 
 export async function GET(req: Request) {
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
     isActive,
   });
 
-  await invalidateFaqCache(productId);
+  await flushRedisCache();
   revalidatePath("/faqs");
 
   return NextResponse.json({ ok: true, id: result.id });
@@ -124,10 +124,7 @@ export async function DELETE(req: Request) {
   }
 
   await deleteFaq(Math.trunc(id));
-
-  if (productId) {
-    await invalidateFaqCache(Number(productId));
-  }
+  await flushRedisCache();
   revalidatePath("/faqs");
 
   return NextResponse.json({ ok: true });

@@ -9,6 +9,7 @@ import {
 } from "@/lib/db/queries/admin-users";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET(req: Request) {
   const session = await requireSession();
@@ -110,6 +111,7 @@ export async function POST(req: Request) {
       branchId,
       isActive,
     });
+    await flushRedisCache();
     revalidatePath("/users");
     return NextResponse.json({ ok: true, id });
   }
@@ -140,6 +142,7 @@ export async function POST(req: Request) {
     isActive,
   });
 
+  await flushRedisCache();
   revalidatePath("/users");
   return NextResponse.json({ ok: true, id: result.id });
 }
@@ -157,6 +160,7 @@ export async function DELETE(req: Request) {
   }
 
   await deleteAdminUser(Math.trunc(id));
+  await flushRedisCache();
   revalidatePath("/users");
 
   return NextResponse.json({ ok: true });

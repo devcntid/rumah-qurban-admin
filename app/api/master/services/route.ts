@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/app/api/_utils/session";
 import { deleteService, listServices, upsertService } from "@/lib/db/queries/services";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET() {
   const session = await requireSession();
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     animalVariantId,
     coaCode,
   });
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }
 
@@ -56,5 +58,6 @@ export async function DELETE(req: Request) {
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   await deleteService(Math.trunc(id));
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }

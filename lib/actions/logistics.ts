@@ -3,6 +3,7 @@
 import { getDb } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 async function getTripBranchId(tripId: number): Promise<number | null> {
   const sql = getDb();
@@ -75,6 +76,7 @@ export async function createLogisticsTripAction(input: {
     if (tripId == null) {
       return { success: false as const, error: "Gagal menyimpan jadwal trip." };
     }
+    await flushRedisCache();
     revalidatePath("/logistics");
     revalidatePath(`/logistics/trips/${tripId}`);
     return { success: true as const, tripId };
@@ -149,6 +151,7 @@ export async function updateLogisticsTripAction(input: {
     return { success: false as const, error: "Gagal memperbarui trip." };
   }
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${input.tripId}`);
   return { success: true as const };
@@ -175,6 +178,7 @@ export async function deleteLogisticsTripAction(tripId: number) {
     return { success: false as const, error: "Gagal menghapus trip." };
   }
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${tripId}`);
   return { success: true as const };
@@ -224,6 +228,7 @@ export async function bulkAddTrackingToManifestAnimalsAction(input: {
       `;
     }
     
+    await flushRedisCache();
     revalidatePath("/logistics");
     revalidatePath("/farm");
     
@@ -325,6 +330,7 @@ export async function addFarmInventoryToTripAction(tripId: number, farmInventory
     )
   `;
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${tripId}`);
   revalidatePath("/farm");
@@ -453,6 +459,7 @@ export async function addFarmInventoriesToTripAction(tripId: number, farmInvento
     };
   }
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${tripId}`);
   revalidatePath("/farm");
@@ -519,6 +526,7 @@ export async function markManifestDeliveredAction(manifestId: number) {
     `;
   }
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${row.tripId}`);
   revalidatePath("/farm");
@@ -628,6 +636,7 @@ export async function updateDeliveryManifestAction(input: {
     return { success: false as const, error: "Gagal memperbarui manifest." };
   }
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${input.tripId}`);
   if (cur.tripId !== input.tripId) {
@@ -667,6 +676,7 @@ export async function deleteDeliveryManifestAction(manifestId: number) {
     return { success: false as const, error: "Gagal menghapus manifest." };
   }
 
+  await flushRedisCache();
   revalidatePath("/logistics");
   revalidatePath(`/logistics/trips/${row.tripId}`);
   revalidatePath("/farm");

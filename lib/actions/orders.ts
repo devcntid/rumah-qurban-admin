@@ -3,6 +3,7 @@
 import { getDb } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 import { z } from "zod";
 import {
   updateOrderFormSchema,
@@ -185,6 +186,7 @@ export async function createOrderAction(data: z.infer<typeof CreateOrderSchema>)
       }
     }
 
+    await flushRedisCache();
     revalidatePath("/orders");
     revalidatePath("/pos");
     return { success: true, orderId, invoiceNumber };
@@ -198,6 +200,7 @@ export async function deleteOrderAction(id: number) {
   const { deleteOrder } = await import("@/lib/db/queries/orders");
   try {
     await deleteOrder(id);
+    await flushRedisCache();
     revalidatePath("/orders");
     return { success: true };
   } catch (error) {
@@ -267,6 +270,7 @@ export async function updateOrderAction(
         status = ${d.status}
       WHERE id = ${d.orderId}
     `;
+    await flushRedisCache();
     revalidatePath(`/orders/${d.orderId}`);
     revalidatePath("/orders");
     return { success: true };
@@ -562,6 +566,7 @@ export async function updateOrderViaPosAction(
       await sql`DELETE FROM order_items WHERE id = ${id} AND order_id = ${d.orderId}`;
     }
 
+    await flushRedisCache();
     revalidatePath(`/orders/${d.orderId}`);
     revalidatePath("/orders");
     revalidatePath("/pos");

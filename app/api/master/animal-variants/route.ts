@@ -5,6 +5,7 @@ import {
   listAnimalVariants,
   upsertAnimalVariant,
 } from "@/lib/db/queries/master";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET() {
   const session = await requireSession();
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
   if (!species) return NextResponse.json({ error: "Species wajib diisi" }, { status: 400 });
 
   await upsertAnimalVariant({ id, species, classGrade, weightRange, description });
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }
 
@@ -42,5 +44,6 @@ export async function DELETE(req: Request) {
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   await deleteAnimalVariant(Math.trunc(id));
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }

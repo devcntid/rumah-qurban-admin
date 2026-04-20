@@ -9,6 +9,7 @@ import {
 } from "@/lib/db/queries/farm";
 import { revalidatePath } from "next/cache";
 import { generateAlphanumericId } from "@/lib/utils/id";
+import { flushRedisCache } from "@/lib/cache/redis";
 import { z } from "zod";
 
 const FarmInventorySchema = z.object({
@@ -60,6 +61,7 @@ export async function saveInventoryAction(data: any) {
   
   try {
     await upsertFarmInventory(formData as any);
+    await flushRedisCache();
     revalidatePath("/farm");
     return { success: true };
   } catch (error: any) {
@@ -78,21 +80,25 @@ export async function bulkSaveInventoryAction(commonData: any, items: any[]) {
     };
     await upsertFarmInventory(data);
   }
+  await flushRedisCache();
   revalidatePath("/farm");
 }
 
 export async function deleteInventoryAction(id: number) {
   await deleteFarmInventory(id);
+  await flushRedisCache();
   revalidatePath("/farm");
 }
 
 export async function savePenAction(formData: { id?: number; branchId: number; name: string }) {
   await upsertFarmPen(formData);
+  await flushRedisCache();
   revalidatePath("/farm");
 }
 
 export async function deletePenAction(id: number) {
   await deleteFarmPen(id);
+  await flushRedisCache();
   revalidatePath("/farm");
 }
 
@@ -103,6 +109,7 @@ export async function patchEartagAction(id: number, eartagId: string) {
   
   try {
     await updateFarmEartag(id, eartagId);
+    await flushRedisCache();
     revalidatePath("/farm");
     return { success: true };
   } catch (error: any) {
@@ -153,6 +160,7 @@ export async function addAnimalTrackingAction(data: any) {
       )
     `;
     
+    await flushRedisCache();
     revalidatePath("/farm");
     revalidatePath(`/farm/${farmInventoryId}`);
     revalidatePath("/orders/[id]", "page");
@@ -211,6 +219,7 @@ export async function updateAnimalTrackingAction(trackingId: number, data: any) 
     `;
     
     const farmInventoryId = tracking[0].farm_inventory_id;
+    await flushRedisCache();
     revalidatePath("/farm");
     revalidatePath(`/farm/${farmInventoryId}`);
     revalidatePath("/orders/[id]", "page");
@@ -239,6 +248,7 @@ export async function deleteAnimalTrackingAction(trackingId: number) {
     await sql`DELETE FROM animal_trackings WHERE id = ${trackingId}`;
     
     const farmInventoryId = tracking[0].farm_inventory_id;
+    await flushRedisCache();
     revalidatePath("/farm");
     revalidatePath(`/farm/${farmInventoryId}`);
     revalidatePath("/orders/[id]", "page");

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/app/api/_utils/session";
 import { deleteSalesAgent, listSalesAgents, upsertSalesAgent } from "@/lib/db/queries/master";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET() {
   const session = await requireSession();
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
   }
 
   await upsertSalesAgent({ id, name, category, phone });
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }
 
@@ -36,5 +38,6 @@ export async function DELETE(req: Request) {
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   await deleteSalesAgent(Math.trunc(id));
+  await flushRedisCache();
   return NextResponse.json({ ok: true });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/app/api/_utils/session";
 import { getDb } from "@/lib/db/client";
-import { invalidateFaqCache } from "@/lib/cache/redis";
+import { flushRedisCache } from "@/lib/cache/redis";
 import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
@@ -31,15 +31,7 @@ export async function POST(req: Request) {
       `;
     }
 
-    // Invalidate cache for all affected products
-    const productIds = await sql`
-      SELECT DISTINCT product_id FROM faqs WHERE id = ANY(${updates.map(u => u.id)})
-    `;
-    
-    for (const row of productIds as any[]) {
-      await invalidateFaqCache(row.product_id);
-    }
-
+    await flushRedisCache();
     revalidatePath("/faqs");
 
     return NextResponse.json({ ok: true });

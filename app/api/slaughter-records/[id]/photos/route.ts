@@ -3,6 +3,7 @@ import { requireSession } from "@/app/api/_utils/session";
 import { put } from "@vercel/blob";
 import { addSlaughterPhotos, getSlaughterRecordById } from "@/lib/db/queries/slaughter-records";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 import type { DocumentationPhoto } from "@/types/notifications";
 
 export async function POST(
@@ -58,6 +59,7 @@ export async function POST(
     }
 
     await addSlaughterPhotos(slaughterRecordId, uploadedPhotos);
+    await flushRedisCache();
     revalidatePath(`/orders`);
 
     return NextResponse.json({

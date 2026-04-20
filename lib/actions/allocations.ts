@@ -2,6 +2,7 @@
 
 import { getDb } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function allocateAnimalAction(inventoryId: number, orderItemId: number) {
   const sql = getDb();
@@ -43,6 +44,7 @@ export async function allocateAnimalAction(inventoryId: number, orderItemId: num
       )
     `;
 
+    await flushRedisCache();
     revalidatePath("/orders/[id]", "page");
     revalidatePath("/farm");
     revalidatePath("/logistics");
@@ -73,6 +75,7 @@ export async function deallocateAnimalAction(allocationId: number) {
       WHERE id = ${farm_inventory_id}
     `;
 
+    await flushRedisCache();
     revalidatePath("/orders/[id]", "page");
     revalidatePath("/farm");
     revalidatePath("/logistics");
@@ -128,6 +131,7 @@ export async function bulkAllocateAction(inventoryIds: number[], orderItemId: nu
       `;
     }
 
+    await flushRedisCache();
     revalidatePath("/orders/[id]", "page");
     revalidatePath("/farm");
     revalidatePath("/logistics");

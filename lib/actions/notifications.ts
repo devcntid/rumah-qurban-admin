@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
+import { flushRedisCache } from "@/lib/cache/redis";
 import { compileNotificationMessage } from "@/lib/notifications/template-engine";
 import { sendWhatsAppMessage } from "@/lib/notifications/starsender";
 import { createNotifLog, updateNotifLogStatus } from "@/lib/db/queries/notif-logs";
@@ -58,6 +59,7 @@ export async function sendNotificationAction(data: {
       };
     }
 
+    await flushRedisCache();
     revalidatePath("/orders");
     revalidatePath("/broadcast");
 
@@ -136,6 +138,7 @@ export async function sendBulkNotificationsAction(data: {
     }
   }
 
+  await flushRedisCache();
   revalidatePath("/orders");
   revalidatePath("/broadcast");
 

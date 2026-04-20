@@ -8,6 +8,7 @@ import {
   deleteNotifTemplate,
 } from "@/lib/db/queries/notif-templates";
 import { revalidatePath } from "next/cache";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function GET(request: NextRequest) {
   const session = await requireSession();
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
       templateText: templateText.trim(),
     });
 
+    await flushRedisCache();
     revalidatePath("/notif-templates");
 
     return NextResponse.json({
@@ -110,6 +112,7 @@ export async function DELETE(request: NextRequest) {
 
   try {
     await deleteNotifTemplate(id);
+    await flushRedisCache();
     revalidatePath("/notif-templates");
     return NextResponse.json({ success: true, message: "Template deleted" });
   } catch (error) {

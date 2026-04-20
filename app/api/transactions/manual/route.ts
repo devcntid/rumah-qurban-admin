@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { upsertTransaction } from "@/lib/db/queries/transactions";
 import { requireSession } from "@/app/api/_utils/session";
+import { flushRedisCache } from "@/lib/cache/redis";
 
 export async function POST(req: Request) {
   try {
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
       transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
     });
 
+    await flushRedisCache();
     return NextResponse.json({ success: true, id });
   } catch (err) {
     console.error("Manual transaction error", err);
