@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { TemplateModal } from "./TemplateModal";
@@ -145,6 +146,7 @@ export default function FarmClient({
   page: number;
   pageSize: number;
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("inventory");
   const [isPending, startTransition] = useTransition();
   
@@ -192,6 +194,7 @@ export default function FarmClient({
       if (res.success) {
         toast.success(selectedItem ? "Data inventaris diperbarui" : "Data inventaris ditambahkan");
         setIsModalOpen(false);
+        router.refresh();
       } else {
         if (res.fieldErrors) {
           const errorMsg = Object.entries(res.fieldErrors)
@@ -213,6 +216,7 @@ export default function FarmClient({
       await bulkSaveInventoryAction(commonBulk, items);
       toast.success(`${bulkQty} record hewan berhasil digenerate`);
       setIsBulkModalOpen(false);
+      router.refresh();
     });
   };
 
@@ -221,6 +225,7 @@ export default function FarmClient({
     startTransition(async () => {
       await deleteInventoryAction(id);
       toast.success("Data inventaris dihapus");
+      router.refresh();
     });
   };
 
@@ -237,6 +242,7 @@ export default function FarmClient({
       await savePenAction(penFormData);
       toast.success(selectedPen ? "Data kandang diperbarui" : "Kandang baru ditambahkan");
       setIsPenModalOpen(false);
+      router.refresh();
     });
   };
 
@@ -245,6 +251,7 @@ export default function FarmClient({
     startTransition(async () => {
       await deletePenAction(id);
       toast.success("Kandang berhasil dihapus");
+      router.refresh();
     });
   };
 

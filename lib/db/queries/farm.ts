@@ -270,6 +270,8 @@ export async function upsertFarmPen(input: { id?: number; branchId: number; name
     const res = await sql`
       INSERT INTO farm_pens (branch_id, name)
       VALUES (${input.branchId}, ${input.name})
+      ON CONFLICT (name, branch_id) DO UPDATE
+      SET name = EXCLUDED.name
       RETURNING id
     `;
     return (res as any)[0].id;

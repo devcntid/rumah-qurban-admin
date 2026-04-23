@@ -295,6 +295,7 @@ export function MasterCrud({
                         action={() =>
                           start(async () => {
                             await api(`/api/master/branches?id=${b.id}`, { method: "DELETE" });
+                            window.location.reload();
                           })
                         }
                       >
@@ -345,6 +346,7 @@ export function MasterCrud({
                         action={() =>
                           start(async () => {
                             await api(`/api/master/vendors?id=${v.id}`, { method: "DELETE" });
+                            window.location.reload();
                           })
                         }
                       >
@@ -415,6 +417,7 @@ export function MasterCrud({
                             await api(`/api/master/payment-methods?id=${p.id}`, {
                               method: "DELETE",
                             });
+                            window.location.reload();
                           })
                         }
                       >
@@ -469,6 +472,7 @@ export function MasterCrud({
                             await api(`/api/master/sales-agents?id=${s.id}`, {
                               method: "DELETE",
                             });
+                            window.location.reload();
                           })
                         }
                       >
@@ -634,6 +638,7 @@ export function MasterCrud({
                                 await api(`/api/master/animal-variants?id=${a.id}`, {
                                   method: "DELETE",
                                 });
+                                window.location.reload();
                               })
                             }
                           >
@@ -694,6 +699,7 @@ export function MasterCrud({
                         action={() =>
                           start(async () => {
                             await api(`/api/master/services?id=${s.id}`, { method: "DELETE" });
+                            window.location.reload();
                           })
                         }
                       >
