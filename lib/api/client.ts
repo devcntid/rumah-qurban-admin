@@ -27,20 +27,18 @@ export async function api<T>(
 
   const res = await fetch(input, { ...init, headers, body });
   if (!res.ok) {
+    const text = await res.text().catch(() => "");
     const contentType = res.headers.get("content-type");
-    
-    if (contentType?.includes("application/json")) {
+    if (contentType?.includes("application/json") && text) {
       try {
-        const errorData = (await res.json()) as ApiError;
+        const errorData = JSON.parse(text) as ApiError;
         throw new ApiException(res.status, errorData);
       } catch (e) {
         if (e instanceof ApiException) throw e;
       }
     }
-    
-    const text = await res.text().catch(() => "");
-    throw new ApiException(res.status, { 
-      error: text || `Request failed with status ${res.status}` 
+    throw new ApiException(res.status, {
+      error: text || `Request failed with status ${res.status}`,
     });
   }
   return (await res.json()) as T;

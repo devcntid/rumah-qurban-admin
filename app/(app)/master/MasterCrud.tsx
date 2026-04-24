@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Filter, RotateCcw } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { ApiException } from "@/lib/api/client";
 import type {
   AnimalVariantBranchLinkRow,
   AnimalVariantRow,
@@ -71,10 +73,19 @@ export function MasterCrud({
   variantBranchLinks: AnimalVariantBranchLinkRow[];
   services: ServiceRow[];
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("branches");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState>(null);
   const [pending, start] = useTransition();
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const mutationErrorMessage = (e: unknown) =>
+    e instanceof ApiException
+      ? e.errorData.error || e.errorData.message || e.message
+      : e instanceof Error
+        ? e.message
+        : "Terjadi kesalahan";
 
   const [variantFilterSpecies, setVariantFilterSpecies] = useState("");
   const [variantFilterGrade, setVariantFilterGrade] = useState("");
@@ -205,16 +216,21 @@ export function MasterCrud({
   }, [tab]);
 
   const openNew = () => {
+    setActionError(null);
     setEditing(null);
     setOpen(true);
   };
 
   const openEdit = (nextTab: Tab, row: unknown) => {
+    setActionError(null);
     setEditing({ tab: nextTab, row } as EditingState);
     setOpen(true);
   };
 
-  const close = () => setOpen(false);
+  const close = () => {
+    setActionError(null);
+    setOpen(false);
+  };
   
   // Handle tab change with page reset
   const handleTabChange = (newTab: Tab) => {
@@ -262,6 +278,23 @@ export function MasterCrud({
           </button>
         </div>
 
+        {actionError && !open && (
+          <div
+            role="alert"
+            className="mx-4 mt-4 flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          >
+            <span className="font-medium">{actionError}</span>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="shrink-0 font-bold text-red-700 hover:text-red-900"
+              aria-label="Tutup pesan error"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {tab === "branches" && (
           <table className="w-full text-left border-collapse">
             <thead>
@@ -294,8 +327,13 @@ export function MasterCrud({
                       <form
                         action={() =>
                           start(async () => {
-                            await api(`/api/master/branches?id=${b.id}`, { method: "DELETE" });
-                            window.location.reload();
+                            try {
+                              setActionError(null);
+                              await api(`/api/master/branches?id=${b.id}`, { method: "DELETE" });
+                              router.refresh();
+                            } catch (e) {
+                              setActionError(mutationErrorMessage(e));
+                            }
                           })
                         }
                       >
@@ -345,8 +383,13 @@ export function MasterCrud({
                       <form
                         action={() =>
                           start(async () => {
-                            await api(`/api/master/vendors?id=${v.id}`, { method: "DELETE" });
-                            window.location.reload();
+                            try {
+                              setActionError(null);
+                              await api(`/api/master/vendors?id=${v.id}`, { method: "DELETE" });
+                              router.refresh();
+                            } catch (e) {
+                              setActionError(mutationErrorMessage(e));
+                            }
                           })
                         }
                       >
@@ -414,10 +457,15 @@ export function MasterCrud({
                       <form
                         action={() =>
                           start(async () => {
-                            await api(`/api/master/payment-methods?id=${p.id}`, {
-                              method: "DELETE",
-                            });
-                            window.location.reload();
+                            try {
+                              setActionError(null);
+                              await api(`/api/master/payment-methods?id=${p.id}`, {
+                                method: "DELETE",
+                              });
+                              router.refresh();
+                            } catch (e) {
+                              setActionError(mutationErrorMessage(e));
+                            }
                           })
                         }
                       >
@@ -469,10 +517,15 @@ export function MasterCrud({
                       <form
                         action={() =>
                           start(async () => {
-                            await api(`/api/master/sales-agents?id=${s.id}`, {
-                              method: "DELETE",
-                            });
-                            window.location.reload();
+                            try {
+                              setActionError(null);
+                              await api(`/api/master/sales-agents?id=${s.id}`, {
+                                method: "DELETE",
+                              });
+                              router.refresh();
+                            } catch (e) {
+                              setActionError(mutationErrorMessage(e));
+                            }
                           })
                         }
                       >
@@ -635,10 +688,15 @@ export function MasterCrud({
                           <form
                             action={() =>
                               start(async () => {
-                                await api(`/api/master/animal-variants?id=${a.id}`, {
-                                  method: "DELETE",
-                                });
-                                window.location.reload();
+                                try {
+                                  setActionError(null);
+                                  await api(`/api/master/animal-variants?id=${a.id}`, {
+                                    method: "DELETE",
+                                  });
+                                  router.refresh();
+                                } catch (e) {
+                                  setActionError(mutationErrorMessage(e));
+                                }
                               })
                             }
                           >
@@ -698,8 +756,13 @@ export function MasterCrud({
                       <form
                         action={() =>
                           start(async () => {
-                            await api(`/api/master/services?id=${s.id}`, { method: "DELETE" });
-                            window.location.reload();
+                            try {
+                              setActionError(null);
+                              await api(`/api/master/services?id=${s.id}`, { method: "DELETE" });
+                              router.refresh();
+                            } catch (e) {
+                              setActionError(mutationErrorMessage(e));
+                            }
                           })
                         }
                       >
@@ -758,6 +821,14 @@ export function MasterCrud({
         onClose={close}
         maxWidthClassName="max-w-xl"
       >
+        {actionError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-900"
+          >
+            {actionError}
+          </div>
+        )}
         {tab === "branches" && (
           (() => {
             const row = editing?.tab === "branches" ? editing.row : null;
@@ -765,14 +836,20 @@ export function MasterCrud({
               <form
                 action={(fd) =>
                   start(async () => {
-                    const payload = {
-                      id: fd.get("id") ? Number(fd.get("id")) : undefined,
-                      name: String(fd.get("name") ?? ""),
-                      coaCode: String(fd.get("coaCode") ?? ""),
-                      isActive: String(fd.get("isActive") ?? "true") === "true",
-                    };
-                    await api("/api/master/branches", { method: "POST", json: payload });
-                    window.location.reload();
+                    try {
+                      setActionError(null);
+                      const payload = {
+                        id: fd.get("id") ? Number(fd.get("id")) : undefined,
+                        name: String(fd.get("name") ?? ""),
+                        coaCode: String(fd.get("coaCode") ?? ""),
+                        isActive: String(fd.get("isActive") ?? "true") === "true",
+                      };
+                      await api("/api/master/branches", { method: "POST", json: payload });
+                      close();
+                      router.refresh();
+                    } catch (e) {
+                      setActionError(mutationErrorMessage(e));
+                    }
                   })
                 }
                 className="space-y-3"
@@ -836,13 +913,19 @@ export function MasterCrud({
               <form
                 action={(fd) =>
                   start(async () => {
-                    const payload = {
-                      id: fd.get("id") ? Number(fd.get("id")) : undefined,
-                      name: String(fd.get("name") ?? ""),
-                      location: String(fd.get("location") ?? ""),
-                    };
-                    await api("/api/master/vendors", { method: "POST", json: payload });
-                    window.location.reload();
+                    try {
+                      setActionError(null);
+                      const payload = {
+                        id: fd.get("id") ? Number(fd.get("id")) : undefined,
+                        name: String(fd.get("name") ?? ""),
+                        location: String(fd.get("location") ?? ""),
+                      };
+                      await api("/api/master/vendors", { method: "POST", json: payload });
+                      close();
+                      router.refresh();
+                    } catch (e) {
+                      setActionError(mutationErrorMessage(e));
+                    }
                   })
                 }
                 className="space-y-3"
@@ -894,14 +977,20 @@ export function MasterCrud({
               <form
                 action={(fd) =>
                   start(async () => {
-                    const payload = {
-                      id: fd.get("id") ? Number(fd.get("id")) : undefined,
-                      name: String(fd.get("name") ?? ""),
-                      category: String(fd.get("category") ?? ""),
-                      phone: String(fd.get("phone") ?? ""),
-                    };
-                    await api("/api/master/sales-agents", { method: "POST", json: payload });
-                    window.location.reload();
+                    try {
+                      setActionError(null);
+                      const payload = {
+                        id: fd.get("id") ? Number(fd.get("id")) : undefined,
+                        name: String(fd.get("name") ?? ""),
+                        category: String(fd.get("category") ?? ""),
+                        phone: String(fd.get("phone") ?? ""),
+                      };
+                      await api("/api/master/sales-agents", { method: "POST", json: payload });
+                      close();
+                      router.refresh();
+                    } catch (e) {
+                      setActionError(mutationErrorMessage(e));
+                    }
                   })
                 }
                 className="space-y-3"
@@ -970,15 +1059,21 @@ export function MasterCrud({
               <form
                 action={(fd) =>
                   start(async () => {
-                    const payload = {
-                      id: fd.get("id") ? Number(fd.get("id")) : undefined,
-                      species: String(fd.get("species") ?? ""),
-                      classGrade: String(fd.get("classGrade") ?? ""),
-                      weightRange: String(fd.get("weightRange") ?? ""),
-                      description: String(fd.get("description") ?? ""),
-                    };
-                    await api("/api/master/animal-variants", { method: "POST", json: payload });
-                    window.location.reload();
+                    try {
+                      setActionError(null);
+                      const payload = {
+                        id: fd.get("id") ? Number(fd.get("id")) : undefined,
+                        species: String(fd.get("species") ?? ""),
+                        classGrade: String(fd.get("classGrade") ?? ""),
+                        weightRange: String(fd.get("weightRange") ?? ""),
+                        description: String(fd.get("description") ?? ""),
+                      };
+                      await api("/api/master/animal-variants", { method: "POST", json: payload });
+                      close();
+                      router.refresh();
+                    } catch (e) {
+                      setActionError(mutationErrorMessage(e));
+                    }
                   })
                 }
                 className="space-y-3"
@@ -1078,19 +1173,25 @@ export function MasterCrud({
               <form
                 action={(fd) =>
                   start(async () => {
-                    const payload = {
-                      id: fd.get("id") ? Number(fd.get("id")) : undefined,
-                      name: String(fd.get("name") ?? ""),
-                      serviceType: String(fd.get("serviceType") ?? ""),
-                      basePrice: Number(fd.get("basePrice") ?? 0),
-                      branchId: fd.get("branchId") ? String(fd.get("branchId")) : "",
-                      animalVariantId: fd.get("animalVariantId")
-                        ? String(fd.get("animalVariantId"))
-                        : "",
-                      coaCode: String(fd.get("coaCode") ?? ""),
-                    };
-                    await api("/api/master/services", { method: "POST", json: payload });
-                    window.location.reload();
+                    try {
+                      setActionError(null);
+                      const payload = {
+                        id: fd.get("id") ? Number(fd.get("id")) : undefined,
+                        name: String(fd.get("name") ?? ""),
+                        serviceType: String(fd.get("serviceType") ?? ""),
+                        basePrice: Number(fd.get("basePrice") ?? 0),
+                        branchId: fd.get("branchId") ? String(fd.get("branchId")) : "",
+                        animalVariantId: fd.get("animalVariantId")
+                          ? String(fd.get("animalVariantId"))
+                          : "",
+                        coaCode: String(fd.get("coaCode") ?? ""),
+                      };
+                      await api("/api/master/services", { method: "POST", json: payload });
+                      close();
+                      router.refresh();
+                    } catch (e) {
+                      setActionError(mutationErrorMessage(e));
+                    }
                   })
                 }
                 className="space-y-3"
@@ -1203,20 +1304,26 @@ export function MasterCrud({
               <form
                 action={(fd) =>
                   start(async () => {
-                    const payload = {
-                      id: fd.get("id") ? Number(fd.get("id")) : undefined,
-                      code: String(fd.get("code") ?? ""),
-                      name: String(fd.get("name") ?? ""),
-                      category: String(fd.get("category") ?? ""),
-                      coaCode: String(fd.get("coaCode") ?? ""),
-                      accountHolderName: String(fd.get("accountHolderName") ?? ""),
-                      bankName: String(fd.get("bankName") ?? ""),
-                      accountNumber: String(fd.get("accountNumber") ?? ""),
-                      isActive: String(fd.get("isActive") ?? "true") === "true",
-                      isPublish: String(fd.get("isPublish") ?? "true") === "true",
-                    };
-                    await api("/api/master/payment-methods", { method: "POST", json: payload });
-                    window.location.reload();
+                    try {
+                      setActionError(null);
+                      const payload = {
+                        id: fd.get("id") ? Number(fd.get("id")) : undefined,
+                        code: String(fd.get("code") ?? ""),
+                        name: String(fd.get("name") ?? ""),
+                        category: String(fd.get("category") ?? ""),
+                        coaCode: String(fd.get("coaCode") ?? ""),
+                        accountHolderName: String(fd.get("accountHolderName") ?? ""),
+                        bankName: String(fd.get("bankName") ?? ""),
+                        accountNumber: String(fd.get("accountNumber") ?? ""),
+                        isActive: String(fd.get("isActive") ?? "true") === "true",
+                        isPublish: String(fd.get("isPublish") ?? "true") === "true",
+                      };
+                      await api("/api/master/payment-methods", { method: "POST", json: payload });
+                      close();
+                      router.refresh();
+                    } catch (e) {
+                      setActionError(mutationErrorMessage(e));
+                    }
                   })
                 }
                 className="space-y-4"

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { toPublicErrorResponse } from "@/app/api/_utils/route-error";
 import { requireSession } from "@/app/api/_utils/session";
 import {
   deleteAnimalVariant,
@@ -15,35 +16,51 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await requireSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-  const id = body?.id ? Number(body.id) : undefined;
-  const species = typeof body?.species === "string" ? body.species.trim() : "";
-  const classGrade =
-    typeof body?.classGrade === "string" ? body.classGrade.trim() || null : null;
-  const weightRange =
-    typeof body?.weightRange === "string" ? body.weightRange.trim() || null : null;
-  const description =
-    typeof body?.description === "string" ? body.description.trim() || null : null;
+    const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+    const rawId = body?.id;
+    const id =
+      rawId !== undefined &&
+      rawId !== null &&
+      rawId !== "" &&
+      Number.isFinite(Number(rawId)) &&
+      Number(rawId) > 0
+        ? Math.trunc(Number(rawId))
+        : undefined;
+    const species = typeof body?.species === "string" ? body.species.trim() : "";
+    const classGrade =
+      typeof body?.classGrade === "string" ? body.classGrade.trim() || null : null;
+    const weightRange =
+      typeof body?.weightRange === "string" ? body.weightRange.trim() || null : null;
+    const description =
+      typeof body?.description === "string" ? body.description.trim() || null : null;
 
-  if (!species) return NextResponse.json({ error: "Species wajib diisi" }, { status: 400 });
+    if (!species) return NextResponse.json({ error: "Species wajib diisi" }, { status: 400 });
 
-  await upsertAnimalVariant({ id, species, classGrade, weightRange, description });
-  await flushRedisCache();
-  return NextResponse.json({ ok: true });
+    await upsertAnimalVariant({ id, species, classGrade, weightRange, description });
+    await flushRedisCache();
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return toPublicErrorResponse(err);
+  }
 }
 
 export async function DELETE(req: Request) {
-  const session = await requireSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await requireSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const url = new URL(req.url);
-  const id = Number(url.searchParams.get("id"));
-  if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    const url = new URL(req.url);
+    const id = Number(url.searchParams.get("id"));
+    if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
-  await deleteAnimalVariant(Math.trunc(id));
-  await flushRedisCache();
-  return NextResponse.json({ ok: true });
+    await deleteAnimalVariant(Math.trunc(id));
+    await flushRedisCache();
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return toPublicErrorResponse(err);
+  }
 }

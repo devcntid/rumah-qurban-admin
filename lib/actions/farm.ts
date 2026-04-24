@@ -12,33 +12,67 @@ import { generateAlphanumericId } from "@/lib/utils/id";
 import { flushRedisCache } from "@/lib/cache/redis";
 import { z } from "zod";
 
+const optionalId = z.preprocess(
+  (v) => (v === "" || v === undefined ? undefined : v),
+  z.coerce.number().int().positive().optional(),
+);
+
+/** Integer opsional/nullable: undefined, null, "", atau angka string dari form/RSC. */
+function optionalNullableInt() {
+  return z.preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === "") return null;
+      return v;
+    },
+    z.coerce.number().int().nullable(),
+  ).optional();
+}
+
+function optionalNullableNumber() {
+  return z.preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === "") return null;
+      return v;
+    },
+    z.coerce.number().nullable(),
+  ).optional();
+}
+
+/** Tanggal dari DB (Date), string ISO, atau input type="date". */
+const dateStringish = z.preprocess((val: unknown) => {
+  if (val === undefined) return undefined;
+  if (val === null || val === "") return null;
+  if (val instanceof Date) return val.toISOString().split("T")[0];
+  return val;
+}, z.string().nullable().optional());
+
 const FarmInventorySchema = z.object({
-  id: z.number().optional(),
-  branchId: z.number(),
+  id: optionalId,
+  branchId: z.coerce.number().int(),
   generatedId: z.string().optional(),
   farmAnimalId: z.string().optional().nullable(),
   eartagId: z.string().min(1, "ID Tag (Eartag) wajib diisi"),
-  animalVariantId: z.number("Varian hewan wajib dipilih").min(1, "Varian hewan wajib dipilih"),
-  vendorId: z.number().optional().nullable(),
-  entryDate: z.string().optional().nullable(),
+  animalVariantId: z.coerce.number().min(1, "Varian hewan wajib dipilih"),
+  vendorId: optionalNullableInt(),
+  entryDate: dateStringish,
   acquisitionType: z.string().optional().nullable(),
   initialProductType: z.string().optional().nullable(),
-  penId: z.number().optional().nullable(),
+  penId: optionalNullableInt(),
   panName: z.string().optional().nullable(),
-  purchasePrice: z.coerce.number().optional().nullable(),
-  initialWeightSource: z.coerce.number().optional().nullable(),
-  pricePerKg: z.coerce.number().optional().nullable(),
-  shippingCost: z.coerce.number().optional().nullable(),
-  totalHpp: z.coerce.number().optional().nullable(),
+  purchasePrice: optionalNullableNumber(),
+  initialWeightSource: optionalNullableNumber(),
+  pricePerKg: optionalNullableNumber(),
+  shippingCost: optionalNullableNumber(),
+  totalHpp: optionalNullableNumber(),
   hornType: z.string().optional().nullable(),
-  initialWeight: z.coerce.number().optional().nullable(),
+  initialWeight: optionalNullableNumber(),
   initialType: z.string().optional().nullable(),
   finalType: z.string().optional().nullable(),
-  weightActual: z.coerce.number().optional().nullable(),
+  weightActual: optionalNullableNumber(),
   photoUrl: z.string().optional().nullable(),
   status: z.string().default("AVAILABLE"),
-  orderItemId: z.number().optional().nullable(),
-  exitDate: z.string().optional().nullable(),
+  orderItemId: optionalNullableInt(),
+  exitDate: dateStringish,
 });
 
 export async function saveInventoryAction(data: any) {

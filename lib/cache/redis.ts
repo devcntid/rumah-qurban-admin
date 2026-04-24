@@ -20,7 +20,11 @@ export async function flushRedisCache() {
     console.warn("Redis not configured, skipping cache flush");
     return;
   }
-  await redis.flushall();
+  try {
+    await redis.flushall();
+  } catch (err) {
+    console.error("flushRedisCache failed (master/API tetap dilanjutkan):", err);
+  }
 }
 
 export async function invalidateFaqCache(_productId?: number) {

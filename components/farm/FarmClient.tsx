@@ -37,6 +37,29 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
 type Tab = "inventory" | "pens";
+
+/** RSC/DB bisa mengirim Date atau angka sebagai string; form & select mengharapkan tipe konsisten. */
+function normalizeInventoryFormState(row: Record<string, unknown>) {
+  const out: Record<string, unknown> = { ...row };
+  for (const k of ["entryDate", "exitDate"] as const) {
+    const v = out[k];
+    if (v instanceof Date) out[k] = v.toISOString().split("T")[0];
+  }
+  for (const k of [
+    "id",
+    "branchId",
+    "animalVariantId",
+    "vendorId",
+    "penId",
+    "orderItemId",
+  ] as const) {
+    const v = out[k];
+    if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) {
+      out[k] = Number(v);
+    }
+  }
+  return out;
+}
 function InlineEartagEdit({ 
   id, 
   value, 
@@ -178,13 +201,17 @@ export default function FarmClient({
   // HANDLERS - INVENTORY
   const handleOpenModal = (item: any = null) => {
     setSelectedItem(item);
-    setFormData(item || { 
-      branchId, 
-      status: "AVAILABLE",
-      acquisitionType: "MANDIRI",
-      initialProductType: "QURBAN ANTAR",
-      entryDate: new Date().toISOString().split('T')[0]
-    });
+    setFormData(
+      item
+        ? normalizeInventoryFormState(item as Record<string, unknown>)
+        : {
+            branchId,
+            status: "AVAILABLE",
+            acquisitionType: "MANDIRI",
+            initialProductType: "QURBAN ANTAR",
+            entryDate: new Date().toISOString().split("T")[0],
+          },
+    );
     setIsModalOpen(true);
   };
 

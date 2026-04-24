@@ -197,11 +197,16 @@ export async function upsertAnimalVariant(input: {
   description?: string | null;
 }) {
   const sql = getDb();
-  if (input.id) {
+  const id =
+    input.id != null && Number.isFinite(Number(input.id)) && Number(input.id) > 0
+      ? Math.trunc(Number(input.id))
+      : undefined;
+
+  if (id != null) {
     await sql`
       INSERT INTO animal_variants (id, species, class_grade, weight_range, description)
       VALUES (
-        ${input.id},
+        ${id},
         ${input.species},
         ${input.classGrade ?? null},
         ${input.weightRange ?? null},
@@ -215,6 +220,14 @@ export async function upsertAnimalVariant(input: {
     `;
     return;
   }
+
+  /** Seed memasukkan id eksplisit tanpa memajukan BIGSERIAL → nextval bisa bentrok. */
+  await sql`
+    SELECT setval(
+      pg_get_serial_sequence('animal_variants', 'id'),
+      COALESCE((SELECT MAX(id) FROM animal_variants), 0)
+    )
+  `;
   await sql`
     INSERT INTO animal_variants (species, class_grade, weight_range, description)
     VALUES (

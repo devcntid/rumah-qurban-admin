@@ -117,6 +117,13 @@ async function main() {
     `;
 
     await sql`
+      SELECT setval(
+        pg_get_serial_sequence('animal_variants', 'id'),
+        COALESCE((SELECT MAX(id) FROM animal_variants), 0)
+      )
+    `;
+
+    await sql`
       INSERT INTO products (id, code, name, requires_shipping, coa_code) VALUES
         (1, 'QA', 'Qurban Antar', TRUE, NULL),
         (2, 'QK', 'Qurban Kaleng', FALSE, NULL),
