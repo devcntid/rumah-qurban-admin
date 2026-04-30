@@ -99,6 +99,13 @@
       "when": 1776624000000,
       "tag": "0013_add_slaughter_schedules",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777056000000,
+      "tag": "0014_drop_farm_inv_eartag_unique",
+      "breakpoints": true
     }
   ]
 }

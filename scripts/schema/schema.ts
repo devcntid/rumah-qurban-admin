@@ -285,7 +285,7 @@ export const farmInventories = pgTable(
     id: bigserial("id", { mode: "number" }).primaryKey(),
     generatedId: varchar("generated_id", { length: 50 }).notNull().unique(),
     farmAnimalId: varchar("farm_animal_id", { length: 50 }),
-    eartagId: varchar("eartag_id", { length: 50 }).notNull().unique(),
+    eartagId: varchar("eartag_id", { length: 50 }).notNull(),
     animalVariantId: bigint("animal_variant_id", { mode: "number" }).references(
       () => animalVariants.id
     ),
