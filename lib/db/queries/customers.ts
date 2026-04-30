@@ -17,7 +17,7 @@ export type CustomerRow = {
 
 export async function getOrCreateCustomer(params: {
   name: string;
-  phone: string;
+  phone: string | number;
   email?: string | null;
   customerType?: string;
   companyName?: string | null;

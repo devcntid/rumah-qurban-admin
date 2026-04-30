@@ -1,8 +1,18 @@
-export function normalizePhoneNumber(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  
+export function normalizePhoneNumber(
+  phone: string | number | null | undefined
+): string | null {
+  if (phone === null || phone === undefined) return null;
+
+  const raw =
+    typeof phone === "number"
+      ? Number.isFinite(phone)
+        ? String(Math.round(phone))
+        : ""
+      : String(phone).trim();
+  if (!raw) return null;
+
   // Remove all non-digit characters
-  let normalized = phone.replace(/\D/g, "");
+  let normalized = raw.replace(/\D/g, "");
   
   // Convert 08xxx to 628xxx
   if (normalized.startsWith("08")) {

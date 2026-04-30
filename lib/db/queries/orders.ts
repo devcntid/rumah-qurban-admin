@@ -205,13 +205,19 @@ export async function countOrders(params: {
 
 export async function deleteOrder(id: number) {
   const sql = getDb();
-  // Cascade delete handles order_items, order_participants, inventory_allocations
-  // but we should reset farm_inventories status if any were linked
+  // Reset farm animals linked to this order's line items
   await sql`
     UPDATE farm_inventories 
     SET status = 'AVAILABLE', order_item_id = NULL 
     WHERE order_item_id IN (SELECT id FROM order_items WHERE order_id = ${id})
   `;
+  // transactions references orders (no ON DELETE) — clear dependents first
+  await sql`
+    DELETE FROM payment_receipts
+    WHERE transaction_id IN (SELECT id FROM transactions WHERE order_id = ${id})
+  `;
+  await sql`DELETE FROM transactions WHERE order_id = ${id}`;
+  // order_items, order_participants, inventory_allocations, slaughter_records: ON DELETE CASCADE
   await sql`DELETE FROM orders WHERE id = ${id}`;
 }
 

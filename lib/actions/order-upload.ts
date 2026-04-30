@@ -17,7 +17,7 @@ type ExcelRow = {
   Cabang: string;
   Sales: string;
   "Nama Customer": string;
-  Telepon?: string;
+  Telepon?: string | number;
   Email?: string;
   "Alamat Pengiriman"?: string;
   Produk: string;
