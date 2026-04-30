@@ -27,9 +27,51 @@ type ExcelRow = {
   Total: number;
   "DP Dibayar"?: number;
   "Status Bayar": string;
-  "Tanggal Order": string;
+  /** String ISO / lokal, atau angka serial Excel (hari sejak 1900-01-01) */
+  "Tanggal Order"?: string | number;
   "Metode Pembayaran"?: string;
 };
+
+/** Excel menyimpan tanggal sebagai serial number; Postgres butuh timestamp yang valid. */
+function excelSerialToUtcDate(serial: number): Date {
+  const ms = (serial - 25569) * 86400 * 1000;
+  return new Date(ms);
+}
+
+function normalizeOrderDateToIso(input: unknown): string {
+  if (input === null || input === undefined || input === "") {
+    return new Date().toISOString();
+  }
+  if (input instanceof Date && !Number.isNaN(input.getTime())) {
+    return input.toISOString();
+  }
+  if (typeof input === "number" && Number.isFinite(input)) {
+    return excelSerialToUtcDate(input).toISOString();
+  }
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    if (/^\d+(\.\d+)?$/.test(trimmed)) {
+      const n = Number(trimmed);
+      if (Number.isFinite(n) && n > 20000 && n < 1000000) {
+        return excelSerialToUtcDate(n).toISOString();
+      }
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+    const m = trimmed.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
+    if (m) {
+      const d = parseInt(m[1], 10);
+      const mo = parseInt(m[2], 10) - 1;
+      let y = parseInt(m[3], 10);
+      if (y < 100) y += 2000;
+      const dt = new Date(y, mo, d);
+      if (!Number.isNaN(dt.getTime())) return dt.toISOString();
+    }
+  }
+  return new Date().toISOString();
+}
 
 type ValidationResult = {
   rowIndex: number;
@@ -105,7 +147,7 @@ export async function uploadOrdersAction(fileBuffer: ArrayBuffer) {
         total: row.Total,
         dpPaid: row["DP Dibayar"] || 0,
         statusBayar: row["Status Bayar"],
-        orderDate: row["Tanggal Order"],
+        orderDate: normalizeOrderDateToIso(row["Tanggal Order"]),
         paymentMethodCode: row["Metode Pembayaran"] 
           ? paymentMap.get(row["Metode Pembayaran"].toLowerCase().trim())
           : null,
